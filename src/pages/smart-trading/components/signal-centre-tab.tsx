@@ -661,6 +661,7 @@ const SignalCentreTab = observer(() => {
                             <div 
                                 key={m.symbol} 
                                 className={classNames('sc-market-card', tradeType.toLowerCase(), { active: isActive, complete: !!analysis })}
+                                style={{ '--strategy-color': analysis ? (tradeType === 'EVENODD' ? '#6366f1' : tradeType === 'OVERUNDER' ? '#f59e0b' : tradeType === 'RISEFALL' ? '#10b981' : '#8b5cf6') : '#6366f1' } as any}
                                 onClick={() => { if (analysis) { setBestSignal(analysis); setScanPhase('SIGNAL_FOUND'); startValidity(); } }}
                             >
                                 <div className='sc-market-card__header'>
@@ -738,17 +739,21 @@ const SignalCentreTab = observer(() => {
             )}
 
             {bestSignal && (
-                <div className='sc-best-signal'>
+                <div className='sc-best-signal sc-glass-panel'>
                     <div className='sc-best-signal__header'>
-                        <span className='sc-best-signal__icon'>🚀</span>
+                        <span className='sc-best-signal__icon'>🔥</span>
                         <div>
                             <h2>{bestSignal.label}</h2>
-                            <p>Suggested: <strong>{bestSignal.signal}</strong></p>
+                            <p className='sc-best-signal__subtitle'>OPTIMIZED SIGNAL DETECTED</p>
                         </div>
-                        <div className='sc-best-signal__validity'>{validity}s</div>
+                        <div className='sc-best-signal__validity'>
+                            <div className='sc-v-label'>VALID FOR</div>
+                            <div className='sc-v-val'>{validity}s</div>
+                        </div>
                     </div>
+                    
                     <div className='sc-suggestion-banner'>
-                        <div className='sc-suggestion-banner__label'>PRO SUGGESTION:</div>
+                        <div className='sc-suggestion-banner__label'>DIGIT CRACKER SUGGESTION:</div>
                         <div className='sc-suggestion-banner__content'>
                             {tradeType === 'OVERUNDER' ? (
                                 <div className='sc-manual-prediction-selector'>
@@ -764,9 +769,11 @@ const SignalCentreTab = observer(() => {
                                             </button>
                                         ))}
                                     </div>
-                                    <small>(Click digit to lock manually)</small>
+                                    <small className='sc-click-hint'>CLICK TO OVERRIDE PREDICTION</small>
                                 </div>
-                            ) : bestSignal.entry}
+                            ) : (
+                                <div className='sc-signal-text-glow'>{bestSignal.signal}</div>
+                            )}
                         </div>
                     </div>
                 </div>
