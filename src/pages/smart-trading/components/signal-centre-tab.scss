@@ -340,82 +340,104 @@
 }
 
 .sc-market-card {
-    background: var(--sc-surface);
+    cursor: pointer;
+    transition: var(--sc-transition);
     border: 1px solid var(--sc-border);
-    border-radius: var(--sc-radius);
-    padding: 2.4rem;
-    padding-top: 4rem;
-    font-family: var(--font-display);
-    position: relative;
-    overflow: hidden;
 
-    &--scanning {
+    &.evenodd { --strategy-color: var(--sc-indigo); }
+    &.overunder { --strategy-color: var(--sc-amber); }
+    &.matches { --strategy-color: var(--sc-violet); }
+    &.risefall { --strategy-color: var(--sc-emerald); }
+    &.differs { --strategy-color: var(--sc-pink); }
+
+    &:hover {
+        transform: translateY(-4px);
+        border-color: var(--strategy-color, var(--sc-indigo));
+        box-shadow: 0 8px 24px -8px var(--strategy-color, var(--sc-indigo));
+    }
+
+    &.active {
         border-color: var(--sc-indigo);
-        background: rgb(99 102 241 / 6%);
-
-        &:after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 60%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--sc-indigo), transparent);
-            animation: sc-sweep 1.2s linear infinite;
-        }
+        background: rgba(99, 102, 241, 0.05);
     }
+}
 
-    &--signal {
-        border-color: var(--sc-emerald);
-        background: rgb(16 185 129 / 6%);
-        box-shadow: 0 0 20px -6px var(--sc-emerald);
-    }
+.sc-strategy-specific-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
 
-    &__header {
+.sc-stat-bar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .sc-stat-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--sc-text-dim);
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 8px;
-        gap: 4px;
     }
 
-    &__name {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--sc-text-dim);
-        line-height: 1.3;
-    }
+    .sc-stat-progress {
+        height: 4px;
+        background: rgb(255 255 255 / 5%);
+        border-radius: 99px;
+        overflow: hidden;
 
-    &__sym {
-        font-size: 10px;
-        font-family: 'JetBrains Mono', monospace;
-        color: var(--sc-text-muted);
-        white-space: nowrap;
-    }
-
-    &__pending {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11px;
-        color: var(--sc-text-muted);
-        padding: 4px 0;
-    }
-
-    &__loader {
-        font-size: 10px;
-        color: var(--sc-indigo);
-
-        span {
-            display: block;
-            margin-top: 4px;
+        .fill {
+            height: 100%;
+            background: var(--strategy-color, var(--sc-indigo));
+            border-radius: 99px;
         }
     }
+}
 
-    &__result {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+.sc-stat-label {
+    font-size: 11px;
+    color: var(--sc-text-dim);
+    .val { color: var(--strategy-color, #fff); font-weight: 800; }
+}
+
+.sc-market-card__footer {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.sc-confidence-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 8px;
+    background: var(--strategy-color, var(--sc-indigo));
+    color: #fff;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.sc-loader-ring {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+
+    div {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--sc-indigo);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: sc-spin 1s linear infinite;
+    }
+
+    span {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: var(--sc-indigo);
     }
 }
 
@@ -705,25 +727,27 @@
     align-items: center;
     gap: 8px;
     text-align: center;
+    border-right: 1px solid var(--sc-border);
+    border-bottom: 1px solid var(--sc-border);
 
     label {
         font-size: 11px;
-        color: var(--sc-text-muted);
+        color: #94a3b8 !important; /* Ensure visibility */
         text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 700;
+        letter-spacing: 1.5px;
+        font-weight: 800;
     }
 
     span {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 900;
         font-family: var(--font-display);
-        color: #fff;
+        color: #ffffff !important; /* Ensure visibility */
 
-        &.won { color: var(--sc-emerald); }
-        &.lost { color: var(--sc-rose); }
-        &.pl.win { color: var(--sc-emerald); text-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-        &.pl.loss { color: var(--sc-rose); text-shadow: 0 0 15px rgba(244, 63, 94, 0.3); }
+        &.won { color: #10b981 !important; }
+        &.lost { color: #f43f5e !important; }
+        &.pl.win { color: #10b981 !important; text-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        &.pl.loss { color: #f43f5e !important; text-shadow: 0 0 20px rgba(244, 63, 94, 0.4); }
     }
 }
 
@@ -772,15 +796,26 @@
 
             td {
                 padding: 14px 20px;
-                color: var(--sc-text-dim);
+                color: #e2e8f0 !important; /* Fixed visibility */
                 font-family: 'JetBrains Mono', monospace;
 
-                &.won { color: var(--sc-emerald); font-weight: 700; }
-                &.lost { color: var(--sc-rose); font-weight: 700; }
-                &.sc-tx-id { color: var(--sc-indigo); font-size: 11px; opacity: 0.8; }
+                &.won { color: #10b981 !important; font-weight: 800; }
+                &.lost { color: #f43f5e !important; font-weight: 800; }
+                &.sc-tx-id { color: #6366f1 !important; font-size: 11px; opacity: 1; }
             }
         }
     }
+}
+
+.sc-recovery-panel {
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    animation: sc-slide-in 0.3s ease-out;
+    
+    label { color: var(--sc-amber); }
+    input, select { border-color: rgba(245, 158, 11, 0.3); }
 }
 
 .sc-journal-view {

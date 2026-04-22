@@ -221,9 +221,9 @@ const SignalCentreTab = observer(() => {
     const [bulkTrades, setBulkTrades] = useState(1);
     const [compoundStake, setCompoundStake] = useState(false);
     const [alternateMarket, setAlternateMarket] = useState(false);
-    const [alternateAfterLosses] = useState(3);
-    const [alternateMarketSymbol] = useState('R_10');
-    const [alternateTradeType] = useState('EVENODD');
+    const [alternateAfterLosses, setAlternateAfterLosses] = useState(3);
+    const [alternateMarketSymbol, setAlternateMarketSymbol] = useState('R_10');
+    const [alternateTradeType, setAlternateTradeType] = useState('EVENODD');
     const [consecutiveLosses, setConsecutiveLosses] = useState(0);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [activeDashboardTab, setActiveDashboardTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
@@ -474,29 +474,38 @@ const SignalCentreTab = observer(() => {
         while (botRef.current) {
             let currentAnalysis = bestSignal;
             if (alternateMarket && consecutiveLosses >= alternateAfterLosses) {
-                addLog(`🔄 Alternate Switch: ${alternateMarketSymbol} | ${alternateTradeType}`);
-                currentAnalysis = { ...bestSignal, symbol: alternateMarketSymbol, tradeType: alternateTradeType };
+                addLog(`🔄 Recovery Mode: Switching to ${alternateMarketSymbol} (${alternateTradeType})`);
+                // Create a synthetic analysis for the alternate market
+                currentAnalysis = { 
+                    ...bestSignal, 
+                    symbol: alternateMarketSymbol, 
+                    tradeType: alternateTradeType,
+                    entry: alternateTradeType === 'EVENODD' ? 'EVEN' : 
+                           alternateTradeType === 'OVERUNDER' ? 'OVER' :
+                           alternateTradeType === 'RISEFALL' ? 'RISE' : 
+                           alternateTradeType === 'MATCHES' ? 'MATCH' : 'DIFF',
+                    prediction: alternateTradeType === 'OVERUNDER' ? 0 : 0
+                };
             }
 
             const currentStake = botStakeRef.current;
-            const tradePromises: Promise<any>[] = [];
+            const ids: string[] = [];
 
             if (tradeType === 'MATCHES' && useMultipleMatches) {
                 for (const pred of matchPredictions) {
                     for (let i = 0; i < bulkTrades; i++) {
-                        tradePromises.push(executeTrade(currentAnalysis, currentStake, pred));
-                        await new Promise(r => setTimeout(r, 150)); // Prevent overlapping API errors
+                        const id = await executeTrade(currentAnalysis, currentStake, pred);
+                        if (id) ids.push(id);
+                        await new Promise(r => setTimeout(r, 300)); 
                     }
                 }
             } else {
                 for (let i = 0; i < bulkTrades; i++) {
-                    tradePromises.push(executeTrade(currentAnalysis, currentStake));
-                    await new Promise(r => setTimeout(r, 150));
+                    const id = await executeTrade(currentAnalysis, currentStake);
+                    if (id) ids.push(id);
+                    await new Promise(r => setTimeout(r, 300));
                 }
             }
-
-
-            const ids = (await Promise.all(tradePromises)).filter(id => id !== null);
 
             if (ids.length === 0) {
                 addLog('⚠️ Execution failed - retrying...');
@@ -628,26 +637,78 @@ const SignalCentreTab = observer(() => {
                         const analysis = analyses.find(a => a.symbol === m.symbol);
                         const isActive = scanningIndex === idx;
                         return (
-                            <div key={m.symbol} className={classNames('sc-market-card', { active: isActive, complete: !!analysis })}>
+                            <div 
+                                key={m.symbol} 
+                                className={classNames('sc-market-card', tradeType.toLowerCase(), { active: isActive, complete: !!analysis })}
+                                onClick={() => { if (analysis) { setBestSignal(analysis); setScanPhase('SIGNAL_FOUND'); startValidity(); } }}
+                            >
                                 <div className='sc-market-card__header'>
-                                    <span>{m.label}</span>
+                                    <span className='sc-market-card__name'>{m.label}</span>
+                                    <span className='sc-market-card__sym'>{m.symbol}</span>
                                 </div>
                                 {analysis ? (
                                     <div className='sc-market-stats'>
-                                        <div className='sc-stat-row'>
-                                            <span>Confidence</span>
-                                            <span>{analysis.confidence.toFixed(1)}%</span>
-                                        </div>
-                                        <div className='sc-stat-row'>
-                                            <span>Signal</span>
-                                            <span className='sc-signal-badge'>{analysis.signal}</span>
-                                        </div>
-                                        <div className='sc-mini-progress'>
-                                            <div className='sc-mini-progress__fill' style={{ width: `${analysis.confidence}%` }} />
+                                        {tradeType === 'EVENODD' && (
+                                            <div className='sc-strategy-specific-stats'>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>EVEN {analysis.evenPct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.evenPct}%` }} /></div>
+                                                </div>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>ODD {analysis.oddPct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.oddPct}%` }} /></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {tradeType === 'OVERUNDER' && (
+                                            <div className='sc-strategy-specific-stats'>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>OVER {analysis.overPct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.overPct}%` }} /></div>
+                                                </div>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>UNDER {analysis.underPct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.underPct}%` }} /></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {tradeType === 'RISEFALL' && (
+                                            <div className='sc-strategy-specific-stats'>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>RISE {analysis.risePct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.risePct}%` }} /></div>
+                                                </div>
+                                                <div className='sc-stat-bar-group'>
+                                                    <div className='sc-stat-label'>FALL {analysis.fallPct.toFixed(1)}%</div>
+                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.fallPct}%` }} /></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {tradeType === 'MATCHES' && (
+                                            <div className='sc-strategy-specific-stats'>
+                                                <div className='sc-stat-label'>HOTTEST: <span className='val'>{analysis.matchesBest}</span></div>
+                                                <div className='sc-stat-label'>CONFIDENCE: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
+                                            </div>
+                                        )}
+                                        {tradeType === 'DIFFERS' && (
+                                            <div className='sc-strategy-specific-stats'>
+                                                <div className='sc-stat-label'>SAFEST: <span className='val'>{analysis.differsBest}</span></div>
+                                                <div className='sc-stat-label'>CONFIDENCE: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
+                                            </div>
+                                        )}
+                                        <div className='sc-market-card__footer'>
+                                            <div className='sc-confidence-badge'>{analysis.confidence.toFixed(0)}% POWER</div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className='sc-market-loading'>{isActive ? 'Scanning...' : 'Pending'}</div>
+                                    <div className='sc-market-loading'>
+                                        {isActive ? (
+                                            <div className='sc-loader-ring'>
+                                                <div />
+                                                <span>SCANNING</span>
+                                            </div>
+                                        ) : 'PENDING'}
+                                    </div>
                                 )}
                             </div>
                         );
@@ -700,9 +761,32 @@ const SignalCentreTab = observer(() => {
                         🔄 Compounding
                     </button>
                     <button className={classNames('sc-toggle-btn', { active: alternateMarket })} onClick={() => setAlternateMarket(!alternateMarket)}>
-                        🔀 Alt Market
+                        🔀 Recovery Mode
                     </button>
                 </div>
+
+                {alternateMarket && (
+                    <div className='sc-recovery-panel'>
+                        <div className='sc-bot-inputs'>
+                            <div className='sc-bot-field'>
+                                <label>Switch After Losses</label>
+                                <input type='number' value={alternateAfterLosses} onChange={e => setAlternateAfterLosses(parseInt(e.target.value))} min={1} />
+                            </div>
+                            <div className='sc-bot-field'>
+                                <label>Recovery Market</label>
+                                <select value={alternateMarketSymbol} onChange={e => setAlternateMarketSymbol(e.target.value)}>
+                                    {CONTINUOUS_INDICES.map(m => <option key={m.symbol} value={m.symbol}>{m.label}</option>)}
+                                </select>
+                            </div>
+                            <div className='sc-bot-field'>
+                                <label>Recovery Strategy</label>
+                                <select value={alternateTradeType} onChange={e => setAlternateTradeType(e.target.value)}>
+                                    {TRADE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {tradeType === 'MATCHES' && (
                     <div className='sc-matches-multi-panel'>
