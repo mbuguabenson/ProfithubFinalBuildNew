@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
+import { api_base, observer as globalObserver } from '@/external/bot-skeleton';
 import './signal-centre-tab.scss';
 
 /* ─────────────────────── CONSTANTS ─────────────────────── */
@@ -389,19 +390,27 @@ const SignalCentreTab = observer(() => {
             const resp = await api.send(req);
             if (resp.error) {
                 addLog(`❌ Proposal Error: ${resp.error.message}`);
+                globalObserver.emit('Error', resp.error);
                 return null;
             }
+
+            globalObserver.emit('contract.status', { id: 'contract.purchase_sent' });
+
             const buy = await api.send({ buy: resp.proposal.id, price: stakeAmt });
             if (buy.error) {
                 addLog(`❌ Buy Error: ${buy.error.message}`);
+                globalObserver.emit('Error', buy.error);
                 return null;
             }
+
+            globalObserver.emit('contract.status', { id: 'contract.purchase_received', buy: buy.buy });
             return buy.buy?.contract_id || null;
         } catch (e: any) { 
             addLog(`❌ Execution Exception: ${e.message || e}`);
             return null; 
         }
     }, [is_socket_opened, ticks, currency]);
+
 
 
     const waitForResult = (id: string | number): Promise<{status: string, profit: number} | null> => {
@@ -416,9 +425,13 @@ const SignalCentreTab = observer(() => {
                 const poc = msg.proposal_open_contract;
                 if (poc && poc.contract_id == id && poc.is_sold) {
                     sub.unsubscribe();
+                    globalObserver.emit('bot.contract', poc);
+                    globalObserver.emit('contract.status', { id: 'contract.sold', contract: poc });
                     resolve({ status: poc.status, profit: parseFloat(poc.profit || '0') });
                 }
             });
+
+
             
             // Timeout after 30 seconds
             setTimeout(() => { 
@@ -453,17 +466,19 @@ const SignalCentreTab = observer(() => {
             const tradePromises: Promise<any>[] = [];
 
             if (tradeType === 'MATCHES' && useMultipleMatches) {
-                // Execute for each set prediction
-                matchPredictions.forEach(pred => {
+                for (const pred of matchPredictions) {
                     for (let i = 0; i < bulkTrades; i++) {
                         tradePromises.push(executeTrade(currentAnalysis, currentStake, pred));
+                        await new Promise(r => setTimeout(r, 150)); // Prevent overlapping API errors
                     }
-                });
+                }
             } else {
                 for (let i = 0; i < bulkTrades; i++) {
                     tradePromises.push(executeTrade(currentAnalysis, currentStake));
+                    await new Promise(r => setTimeout(r, 150));
                 }
             }
+
 
             const ids = (await Promise.all(tradePromises)).filter(id => id !== null);
 
@@ -519,10 +534,9 @@ const SignalCentreTab = observer(() => {
 
                 if (Math.abs(runningPL) >= sl && runningPL < 0) { 
                     addLog(`🛑 Stop Loss hit! Total P/L: ${runningPL.toFixed(2)}`); 
-                    break; 
+                    break;
                 }
             }
-            setCurrentBotStake(botStakeRef.current);
             await new Promise(r => setTimeout(r, 1000));
         }
         setIsBotRunning(false);
