@@ -604,8 +604,8 @@ const SignalCentreTab = observer(() => {
                 <div className='sc-header__title'>
                     <span className='sc-header__icon'>📡</span>
                     <div>
-                        <h1>Signal Centre</h1>
-                        <p>AI-Powered Market Scanner · All Continuous Indices</p>
+                        <h1>SIGNAL CENTRE PRO</h1>
+                        <p>PREMIUM AI MARKET INTELLIGENCE • ALL VOLATILITY INDICES</p>
                     </div>
                 </div>
                 <div className='sc-header__status'>
