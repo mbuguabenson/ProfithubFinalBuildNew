@@ -1,0 +1,343 @@
+@use '@/components/shared/styles/mixins.scss' as *;
+
+// â”€â”€â”€ Nexus Strategy Hub Styles (XML Bots Only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+@use 'components/shared/styles/mixins' as *;
+
+.free-bots-engine {
+    min-height: 100vh;
+    background: #0a0b0f;
+    color: #e2e8f0;
+    font-family: var(--font-body);
+    padding: 0;
+    position: relative;
+
+    // â”€â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .engine-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: to-rem(32px) to-rem(24px);
+        background: linear-gradient(135deg, #0f1117 0%, #13151f 100%);
+        border-bottom: 1px solid rgb(255 255 255 / 5%);
+        z-index: 10;
+
+        &__left {
+            h2 {
+                font-size: to-rem(25.6px);
+                font-weight: 800;
+                font-family: var(--font-display);
+                background: linear-gradient(90deg, #818cf8, #34d399);
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin: 0 0 to-rem(3.2px);
+            }
+
+            p {
+                font-size: to-rem(14.4px);
+                color: #64748b;
+                margin: 0;
+            }
+        }
+
+        .stats-badge {
+            padding: to-rem(6px) to-rem(14px);
+            background: rgb(99 102 241 / 10%);
+            border: 1px solid rgb(99 102 241 / 30%);
+            border-radius: to-rem(20px);
+            font-size: to-rem(12.8px);
+            color: #818cf8;
+            font-weight: 600;
+        }
+    }
+
+    // â”€â”€â”€ Tab Viewport â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .tab-viewport {
+        padding: to-rem(32px) to-rem(24px);
+    }
+
+    // â”€â”€â”€ Library Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .library-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin-bottom: 4rem;
+        justify-content: center;
+
+        .filter-btn {
+            padding: 0.8rem 2.4rem;
+            background: rgb(255 255 255 / 2%);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgb(255 255 255 / 5%);
+            border-radius: 99px;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+
+            &:hover {
+                background: rgb(255 255 255 / 5%);
+                border-color: rgb(129 140 248 / 30%);
+                color: #94a3b8;
+                transform: translateY(-2px);
+            }
+
+            &.active {
+                background: rgb(129 140 248 / 10%);
+                color: #818cf8;
+                border-color: #818cf8;
+                box-shadow: 0 0 20px rgb(129 140 248 / 20%);
+            }
+        }
+    }
+
+    // â”€â”€â”€ Library Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .library-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    // â”€â”€â”€ Bot Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .bot-card {
+        background: rgb(255 255 255 / 2%);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgb(255 255 255 / 5%);
+        border-radius: to-rem(24px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        height: 100%;
+        position: relative;
+
+        @media (width <= 480px) {
+            border-radius: 1.6rem;
+        }
+
+        .card-glow {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 100% 0%, rgba(var(--bot-color-rgb), 0.1) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1;
+        }
+
+        &:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: rgba(var(--bot-color-rgb), 0.4);
+            box-shadow:
+                0 30px 60px -12px rgb(0 0 0 / 60%),
+                0 0 30px rgba(var(--bot-color-rgb), 0.15);
+
+            .card-glow {
+                opacity: 1;
+            }
+
+            .bot-card__icon {
+                transform: scale(1.1) rotate(-5deg);
+            }
+
+            .bot-card__title {
+                color: var(--bot-color);
+            }
+        }
+
+        &__top {
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+
+            @media (width <= 480px) {
+                padding: 1.6rem;
+            }
+        }
+
+        &__icon {
+            font-size: 2.4rem;
+            width: 5.6rem;
+            height: 5.6rem;
+            background: rgba(var(--bot-color-rgb), 0.08);
+            border: 1px solid rgba(var(--bot-color-rgb), 0.2);
+            border-radius: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 16px rgb(0 0 0 / 20%);
+
+            @media (width <= 480px) {
+                width: 4rem;
+                height: 4rem;
+                font-size: 1.8rem;
+                border-radius: 1.2rem;
+            }
+        }
+
+        &__badge {
+            background: rgba(var(--bot-color-rgb), 0.15);
+            color: var(--bot-color);
+            padding: 0.4rem 1.2rem;
+            border-radius: 99px;
+            font-size: 0.6rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(var(--bot-color-rgb), 0.3);
+
+            @media (width <= 480px) {
+                padding: 0.3rem 0.8rem;
+                font-size: 0.5rem;
+            }
+
+            &--new {
+                background: rgb(16 185 129 / 15%);
+                color: #10b981;
+                border-color: rgb(16 185 129 / 30%);
+            }
+        }
+
+        &__body {
+            padding: 0 2rem 2rem;
+            flex: 1;
+            position: relative;
+            z-index: 2;
+
+            @media (width <= 480px) {
+                padding: 0 1.6rem 1.6rem;
+            }
+        }
+
+        &__title {
+            font-size: to-rem(20px);
+            font-weight: 900;
+            margin: 0 0 0.5rem;
+            color: #f8fafc;
+            transition: color 0.3s ease;
+            font-family: var(--font-display);
+
+            @media (width <= 480px) {
+                font-size: 1.4rem;
+                margin-bottom: 0.3rem;
+            }
+        }
+
+        &__tagline {
+            font-size: 0.7rem;
+            color: rgb(148 163 184 / 60%);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+
+            @media (width <= 480px) {
+                font-size: 0.6rem;
+                margin-bottom: 1rem;
+            }
+        }
+
+        &__description {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.7;
+            margin: 0;
+            font-family: var(--font-body);
+
+            @media (width <= 480px) {
+                font-size: 0.85rem;
+                line-height: 1.5;
+            }
+        }
+
+        &__footer {
+            padding: 2rem;
+            border-top: 1px solid rgb(255 255 255 / 4%);
+            position: relative;
+            z-index: 2;
+
+            @media (width <= 480px) {
+                padding: 1.6rem;
+            }
+        }
+
+        &__btn {
+            width: 100%;
+            padding: 1.4rem;
+            background: rgba(var(--bot-color-rgb), 0.05);
+            border: 2px solid rgba(var(--bot-color-rgb), 0.2);
+            border-radius: 1.2rem;
+            color: var(--bot-color);
+            font-weight: 900;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.4s;
+
+            @media (width <= 480px) {
+                padding: 1.1rem;
+                font-size: 0.8rem;
+                border-radius: 1rem;
+            }
+
+            &:hover {
+                background: var(--bot-color);
+                color: #000;
+                border-color: var(--bot-color);
+                box-shadow: 0 8px 20px rgba(var(--bot-color-rgb), 0.3);
+                transform: translateY(-2px);
+            }
+        }
+    }
+
+    // â”€â”€â”€ Loading Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgb(10 11 15 / 90%);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+
+        .spinner {
+            width: to-rem(50px);
+            height: to-rem(50px);
+            border: to-rem(4px) solid rgb(129 140 248 / 20%);
+            border-top-color: #818cf8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        p {
+            margin-top: 1.5rem;
+            font-weight: 700;
+            color: #818cf8;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+}
+
