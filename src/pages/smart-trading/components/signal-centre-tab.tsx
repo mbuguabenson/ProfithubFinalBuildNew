@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
-import { api_base, observer as globalObserver } from '@/external/bot-skeleton';
+import { observer as globalObserver } from '@/external/bot-skeleton';
 import './signal-centre-tab.scss';
 
 /* ─────────────────────── CONSTANTS ─────────────────────── */
@@ -210,8 +210,8 @@ const SignalCentreTab = observer(() => {
     const [stake, setStake] = useState(1.0);
     const [tp, setTp] = useState(10);
     const [sl, setSl] = useState(10);
-    const [martingale, setMartingale] = useState(false);
-    const [martingaleMultiplier, setMartingaleMultiplier] = useState(2.0);
+    const [martingale] = useState(false);
+    const [martingaleMultiplier] = useState(2.0);
     const [isBotRunning, setIsBotRunning] = useState(false);
     const [botLog, setBotLog] = useState<string[]>([]);
     const [botPL, setBotPL] = useState(0);
@@ -413,7 +413,15 @@ const SignalCentreTab = observer(() => {
 
 
 
-    const waitForResult = (id: string | number): Promise<{status: string, profit: number} | null> => {
+    const waitForResult = (id: string | number): Promise<{
+        status: string, 
+        profit: number, 
+        entry?: string, 
+        exit?: string, 
+        buyId?: string, 
+        sellId?: string, 
+        lastDigit?: number | null
+    } | null> => {
         return new Promise(resolve => {
             const api = api_base_ref.current;
             if (!api) { resolve(null); return; }
