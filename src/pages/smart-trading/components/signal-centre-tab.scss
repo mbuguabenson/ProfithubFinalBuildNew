@@ -715,6 +715,48 @@
     border-radius: 4px;
 }
 
+/* ── Multiple Matches Panel ── */
+.sc-matches-multi-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid var(--sc-border);
+}
+
+.sc-multi-fields {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    animation: sc-slide-in 0.2s ease-out;
+}
+
+.sc-digit-inputs {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+
+    input {
+        width: 40px;
+        height: 40px;
+        text-align: center;
+        background: var(--sc-surface-2);
+        border: 1px solid var(--sc-border);
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 16px;
+        outline: none;
+
+        &:focus {
+            border-color: var(--sc-violet);
+            background: rgba(139, 92, 246, 0.1);
+        }
+    }
+}
+
 .sc-validity {
     display: flex;
     align-items: center;

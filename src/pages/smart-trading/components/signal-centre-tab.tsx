@@ -228,6 +228,9 @@ const SignalCentreTab = observer(() => {
     const [consecutiveLosses, setConsecutiveLosses] = useState(0);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [activeDashboardTab, setActiveDashboardTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
+    const [useMultipleMatches, setUseMultipleMatches] = useState(false);
+    const [matchPredictions, setMatchPredictions] = useState<number[]>([0]);
+
 
     const subsRef = useRef<Map<string, () => void>>(new Map());
     const scanRef = useRef(false);
@@ -358,7 +361,7 @@ const SignalCentreTab = observer(() => {
         clearAllSubs();
     }, [clearAllSubs]);
 
-    const executeTrade = useCallback(async (analysis: MarketAnalysis, stakeAmt: number) => {
+    const executeTrade = useCallback(async (analysis: MarketAnalysis, stakeAmt: number, customPrediction?: number) => {
         if (!api_base_ref.current || !is_socket_opened) return null;
         const api = api_base_ref.current;
         let contractType = '';
@@ -372,7 +375,7 @@ const SignalCentreTab = observer(() => {
                 break;
             case 'MATCHES':
                 contractType = 'DIGITMATCH';
-                barrier = Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0);
+                barrier = customPrediction ?? (Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0));
                 break;
             case 'RISEFALL': contractType = analysis.entry === 'RISE' ? 'CALL' : 'PUT'; break;
             case 'DIFFERS':
@@ -429,7 +432,21 @@ const SignalCentreTab = observer(() => {
             }
 
             const currentStake = botStakeRef.current;
-            const tradePromises = Array.from({ length: bulkTrades }).map(() => executeTrade(currentAnalysis, currentStake));
+            const tradePromises: Promise<any>[] = [];
+
+            if (tradeType === 'MATCHES' && useMultipleMatches) {
+                // Execute for each set prediction
+                matchPredictions.forEach(pred => {
+                    for (let i = 0; i < bulkTrades; i++) {
+                        tradePromises.push(executeTrade(currentAnalysis, currentStake, pred));
+                    }
+                });
+            } else {
+                for (let i = 0; i < bulkTrades; i++) {
+                    tradePromises.push(executeTrade(currentAnalysis, currentStake));
+                }
+            }
+
             const ids = (await Promise.all(tradePromises)).filter(id => id !== null);
 
             if (ids.length === 0) {
@@ -624,6 +641,64 @@ const SignalCentreTab = observer(() => {
                         🔀 Alt Market
                     </button>
                 </div>
+
+                {tradeType === 'MATCHES' && (
+                    <div className='sc-matches-multi-panel'>
+                        <button 
+                            className={classNames('sc-toggle-btn', { active: useMultipleMatches })} 
+                            onClick={() => setUseMultipleMatches(!useMultipleMatches)}
+                        >
+                            🎯 Multiple Predictions
+                        </button>
+                        
+                        {useMultipleMatches && (
+                            <div className='sc-multi-fields'>
+                                <div className='sc-bot-field'>
+                                    <label>Count</label>
+                                    <input 
+                                        type='number' 
+                                        min='1' 
+                                        max='5' 
+                                        value={matchPredictions.length} 
+                                        onChange={e => {
+                                            const n = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
+                                            setMatchPredictions(prev => {
+                                                const next = [...prev];
+                                                if (n > next.length) {
+                                                    while (next.length < n) next.push(0);
+                                                } else {
+                                                    next.length = n;
+                                                }
+                                                return next;
+                                            });
+                                        }} 
+                                    />
+                                </div>
+                                <div className='sc-digit-inputs'>
+                                    {matchPredictions.map((digit, i) => (
+                                        <input
+                                            key={i}
+                                            type='number'
+                                            min='0'
+                                            max='9'
+                                            value={digit}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value) || 0;
+                                                setMatchPredictions(prev => {
+                                                    const next = [...prev];
+                                                    next[i] = val;
+                                                    return next;
+                                                });
+                                            }}
+                                            placeholder={`#${i+1}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <button
                     className={classNames('sc-run-btn', { running: isBotRunning })}
                     onClick={() => setIsBotRunning(!isBotRunning)}
