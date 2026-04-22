@@ -427,7 +427,15 @@ const SignalCentreTab = observer(() => {
                     sub.unsubscribe();
                     globalObserver.emit('bot.contract', poc);
                     globalObserver.emit('contract.status', { id: 'contract.sold', contract: poc });
-                    resolve({ status: poc.status, profit: parseFloat(poc.profit || '0') });
+                    resolve({ 
+                        status: poc.status, 
+                        profit: parseFloat(poc.profit || '0'),
+                        entry: poc.entry_tick_display_value,
+                        exit: poc.exit_tick_display_value,
+                        buyId: poc.transaction_ids?.buy,
+                        sellId: poc.transaction_ids?.sell,
+                        lastDigit: poc.exit_tick_display_value ? parseInt(poc.exit_tick_display_value.slice(-1)) : null
+                    });
                 }
             });
 
@@ -496,15 +504,20 @@ const SignalCentreTab = observer(() => {
                 if (!res) return;
                 batchP += res.profit;
                 if (res.status === 'won') batchW++; else batchL++;
+                
                 setTransactions(prev => [{
-                    id: Math.random().toString(36).substr(2, 9),
+                    id: res.buyId || Math.random().toString(36).substr(2, 9),
                     time: new Date().toLocaleTimeString(),
                     symbol: currentAnalysis.symbol,
                     type: currentAnalysis.tradeType,
                     stake: currentStake,
                     profit: res.profit,
-                    status: res.status
-                }, ...prev].slice(0, 50));
+                    status: res.status,
+                    entry: res.entry,
+                    exit: res.exit,
+                    lastDigit: res.lastDigit,
+                    power: currentAnalysis.confidence
+                }, ...prev].slice(0, 100));
             });
 
             runningPL += batchP;
@@ -751,32 +764,103 @@ const SignalCentreTab = observer(() => {
 
             <div className='sc-dashboard'>
                 <div className='sc-dashboard__tabs'>
-                    {['SUMMARY', 'TRANSACTIONS', 'JOURNAL'].map(tab => (
-                        <button key={tab} className={classNames('sc-tab', { active: activeDashboardTab === tab })} onClick={() => setActiveDashboardTab(tab as any)}>
-                            {tab}
+                    {(['SUMMARY', 'TRANSACTIONS', 'JOURNAL'] as const).map(t => (
+                        <button 
+                            key={t} 
+                            className={classNames('sc-dash-tab', { active: activeDashboardTab === t })}
+                            onClick={() => setActiveDashboardTab(t)}
+                        >
+                            {t}
                         </button>
                     ))}
                 </div>
+
                 <div className='sc-dashboard__content'>
                     {activeDashboardTab === 'SUMMARY' && (
-                        <div className='sc-summary'>
-                            <div className='sc-summary-card'><span>P/L</span><strong className={botPL >= 0 ? 'profit' : 'loss'}>{botPL.toFixed(2)}</strong></div>
-                            <div className='sc-summary-card'><span>Wins</span><strong>{botWins}</strong></div>
-                            <div className='sc-summary-card'><span>Losses</span><strong>{botLosses}</strong></div>
+                        <div className='sc-summary-grid'>
+                            <div className='sc-summary-item'>
+                                <label>Total Stake</label>
+                                <span>{(botWins + botLosses) * stake} {currency}</span>
+                            </div>
+                            <div className='sc-summary-item'>
+                                <label>Contracts Won</label>
+                                <span className='won'>{botWins}</span>
+                            </div>
+                            <div className='sc-summary-item'>
+                                <label>Contracts Lost</label>
+                                <span className='lost'>{botLosses}</span>
+                            </div>
+                            <div className='sc-summary-item'>
+                                <label>Total P/L</label>
+                                <span className={classNames('pl', { win: botPL > 0, loss: botPL < 0 })}>
+                                    {botPL.toFixed(2)} {currency}
+                                </span>
+                            </div>
+                            <div className='sc-summary-item'>
+                                <label>No. of Runs</label>
+                                <span>{botWins + botLosses}</span>
+                            </div>
                         </div>
                     )}
+
                     {activeDashboardTab === 'TRANSACTIONS' && (
-                        <div className='sc-transactions'>
-                            {transactions.map((tx, i) => (
-                                <div key={i} className='sc-tx-row'>
-                                    <span>{tx.time}</span><span>{tx.symbol}</span><span className={tx.status}>{tx.profit.toFixed(2)}</span>
-                                </div>
-                            ))}
+                        <div className='sc-table-wrapper'>
+                            <table className='sc-table'>
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Entry/Exit Spot</th>
+                                        <th>Buy Price</th>
+                                        <th>P/L</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.map(tx => (
+                                        <tr key={tx.id}>
+                                            <td>{tx.type}</td>
+                                            <td>{tx.entry || '-'} / {tx.exit || '-'}</td>
+                                            <td>{tx.stake.toFixed(2)}</td>
+                                            <td className={tx.status}>{tx.profit.toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
+
                     {activeDashboardTab === 'JOURNAL' && (
-                        <div className='sc-journal'>
-                            {botLog.map((log, i) => <div key={i} className='sc-log-line'>{log}</div>)}
+                        <div className='sc-journal-view'>
+                            <div className='sc-table-wrapper'>
+                                <table className='sc-table sc-table--journal'>
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Last Digit</th>
+                                            <th>Market</th>
+                                            <th>Power</th>
+                                            <th>Entry/Exit</th>
+                                            <th>Result</th>
+                                            <th>ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.map(tx => (
+                                            <tr key={tx.id}>
+                                                <td>{tx.time}</td>
+                                                <td><span className='sc-digit-badge'>{tx.lastDigit ?? '-'}</span></td>
+                                                <td>{tx.symbol}</td>
+                                                <td>{tx.power.toFixed(1)}%</td>
+                                                <td>{tx.entry || '-'} / {tx.exit || '-'}</td>
+                                                <td className={tx.status}>{tx.status.toUpperCase()}</td>
+                                                <td className='sc-tx-id'>{tx.id}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className='sc-log-view'>
+                                {botLog.map((log, i) => <div key={i} className='sc-log-line'>{log}</div>)}
+                            </div>
                         </div>
                     )}
                 </div>
