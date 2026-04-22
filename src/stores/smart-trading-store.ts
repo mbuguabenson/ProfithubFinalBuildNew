@@ -1304,7 +1304,7 @@ export default class SmartTradingStore {
 
     @action
     evaluateSpeedbotProLogic = () => {
-        const { velocity_threshold, direction } = this.pro_tool_speedbot_settings;
+        const { velocity_threshold } = this.pro_tool_speedbot_settings;
         const velocity = Math.abs(this.ultra_momentum_velocity); // Simplified reuse
 
         if (velocity >= velocity_threshold * 100) {
@@ -3265,9 +3265,6 @@ export default class SmartTradingStore {
         }
 
         const executeSingle = async (current_stake: number) => {
-            this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_SENT);
-            globalObserver.emit('contract.status', { id: 'contract.purchase_sent' });
-
             try {
                 if (!api_base.api) return;
 
@@ -3300,8 +3297,7 @@ export default class SmartTradingStore {
                     return;
                 }
 
-                this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_RECEIVED);
-                globalObserver.emit('ui.log.success', `Trade executed: ${contract_type} on ${symbol}`);
+                this.addLog(`Trade executed: ${contract_type} on ${symbol}`);
 
                 const contract_id = buy_response.buy.contract_id;
                 const subscription = api_base.api.onMessage().subscribe((msg: any) => {
@@ -3369,5 +3365,14 @@ export default class SmartTradingStore {
                 await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between bulk trades
             }
         }
+    };
+
+    @action
+    stopAll = () => {
+        this.is_bulk_auto_running = false;
+        this.is_money_maker_ultra_running = false;
+        this.scp_status = 'idle';
+        this.is_executing = false;
+        this.addConsoleLog('ALL SYSTEMS STOPPED', 'warning');
     };
 }

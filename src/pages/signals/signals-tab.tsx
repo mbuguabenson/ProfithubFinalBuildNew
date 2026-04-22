@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { useDeriv } from '@/hooks/use-deriv';
 import { useStore } from '@/hooks/useStore';
 import './signals-tab.scss';
+import './signal-card-styles.scss';
 
 const SignalCard = ({
     signal,
@@ -27,9 +28,9 @@ const SignalCard = ({
     }, []);
 
     const getStatusClass = () => {
-        if (signal.status === 'TRADE NOW') return 'signal-card--trade-now';
-        if (signal.status === 'WAIT') return 'signal-card--wait';
-        return 'signal-card--neutral';
+        if (signal.status === 'TRADE NOW') return 'status--trade-now';
+        if (signal.status === 'WAIT') return 'status--wait';
+        return 'status--neutral';
     };
 
     return (
@@ -127,6 +128,7 @@ const SignalsTab = observer(() => {
     } = useDeriv('R_100', 120);
 
     const [activeBotSignals, setActiveBotSignals] = useState<Record<string, boolean>>({});
+    const [activeSignalData, setActiveSignalData] = useState<Record<string, any>>({});
     const [botSettings, setBotSettings] = useState({
         stake: 1.0,
         ticks: 1,
@@ -142,7 +144,9 @@ const SignalsTab = observer(() => {
 
     const stopAll = () => {
         setActiveBotSignals({});
-        // Any other stop logic
+        setActiveSignalData({});
+        smart_trading.stopAll();
+        addLog('[System] STOP ALL command executed. All bots halted.');
     };
 
     const [sessionStats, setSessionStats] = useState({
@@ -156,6 +160,13 @@ const SignalsTab = observer(() => {
             const isStarting = !activeBotSignals[sig.recommendation];
             if (isStarting) {
                 setSessionStats(prev => ({ ...prev, currentStake: botSettings.stake, consecutiveLosses: 0 }));
+                setActiveSignalData(prev => ({ ...prev, [sig.recommendation]: sig }));
+            } else {
+                setActiveSignalData(prev => {
+                    const next = { ...prev };
+                    delete next[sig.recommendation];
+                    return next;
+                });
             }
             setActiveBotSignals(prev => ({ ...prev, [sig.recommendation]: isStarting }));
             return;
@@ -438,29 +449,49 @@ const SignalsTab = observer(() => {
                     <h3>Live Trading Signals</h3>
                 </div>
                 <div className='signals-tab__signals-grid'>
-                    {proSignals.map((sig, i) => (
-                        <SignalCard 
-                            key={`pro-${i}`} 
-                            signal={sig} 
-                            isPro 
-                            onTrade={handleTrade} 
-                            isBotActive={activeBotSignals[sig.recommendation]}
-                        />
-                    ))}
-                    {signals.map((sig, i) => (
-                        <SignalCard 
-                            key={`reg-${i}`} 
-                            signal={sig} 
-                            onTrade={handleTrade} 
-                            isBotActive={activeBotSignals[sig.recommendation]}
-                        />
-                    ))}
-                    {signals.length === 0 && proSignals.length === 0 && (
-                        <div className='empty-signals'>
-                            <ShieldAlert size={48} />
-                            <p>Analyzing market patterns... Waiting for high-probability signals.</p>
-                        </div>
-                    )}
+                    {(() => {
+                        // Merge current signals with active signal data to prevent disappearing
+                        const mergedPro = [...proSignals];
+                        const mergedReg = [...signals];
+
+                        Object.values(activeSignalData).forEach(activeSig => {
+                            const isPro = proSignals.some(s => s.recommendation === activeSig.recommendation);
+                            const list = isPro ? mergedPro : mergedReg;
+                            const exists = list.some(s => s.recommendation === activeSig.recommendation);
+                            
+                            if (!exists) {
+                                list.push({ ...activeSig, status: 'RUNNING' }); // Mark as running if dropped from analysis
+                            }
+                        });
+
+                        return (
+                            <>
+                                {mergedPro.map((sig, i) => (
+                                    <SignalCard 
+                                        key={`pro-${sig.recommendation}-${i}`} 
+                                        signal={sig} 
+                                        isPro 
+                                        onTrade={handleTrade} 
+                                        isBotActive={activeBotSignals[sig.recommendation]}
+                                    />
+                                ))}
+                                {mergedReg.map((sig, i) => (
+                                    <SignalCard 
+                                        key={`reg-${sig.recommendation}-${i}`} 
+                                        signal={sig} 
+                                        onTrade={handleTrade} 
+                                        isBotActive={activeBotSignals[sig.recommendation]}
+                                    />
+                                ))}
+                                {mergedPro.length === 0 && mergedReg.length === 0 && (
+                                    <div className='no-signals'>
+                                        <Brain size={48} />
+                                        <p>Scanning market for high-probability setups...</p>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
             </section>
 
