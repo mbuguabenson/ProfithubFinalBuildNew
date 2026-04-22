@@ -1,0 +1,62 @@
+@use '@/components/shared/styles/mixins' as *;
+
+.app-header {
+    &__logo-container {
+        padding-inline-start: 1.2rem;
+        padding-inline-end: 2rem;
+        border-inline-end: 1px solid var(--general-section-1);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        position: relative;
+
+        @include mobile-or-tablet-screen {
+            display: none; // Completely remove logo on mobile
+        }
+    }
+}
+
+.header-branding {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    .brand-logo-img {
+        height: 32px;
+        width: auto;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgb(0 198 255 / 40%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .brand-logo-text {
+        font-family: 'Inter', 'Roboto', sans-serif;
+        font-weight: 900;
+        font-size: 2.2rem;
+        letter-spacing: -0.5px;
+        background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 20px rgb(0 198 255 / 30%);
+        transition: all 0.3s ease;
+
+        @include mobile-or-tablet-screen {
+            font-size: 1.6rem; // Scale down instead of hiding
+        }
+    }
+
+    &:hover {
+        .brand-logo-img {
+            transform: scale(1.05) rotate(-5deg);
+            box-shadow: 0 0 20px rgb(0 198 255 / 60%);
+        }
+
+        .brand-logo-text {
+            filter: brightness(1.2);
+            text-shadow: 0 0 25px rgb(0 198 255 / 50%);
+        }
+    }
+}

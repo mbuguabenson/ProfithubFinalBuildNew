@@ -1,0 +1,303 @@
+.initial-loader-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #020617;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', 'Inter', monospace;
+}
+
+.loader-background-glow {
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(0, 198, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 20% 80%, rgba(255, 68, 79, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(56, 239, 125, 0.05) 0%, transparent 40%);
+    animation: slow-drift 20s ease-in-out infinite alternate;
+    z-index: 1;
+}
+
+.loader-content-wrap {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 480px;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 3rem;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        inset 0 0 20px rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+}
+
+.logo-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+
+    .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 2;
+    }
+
+    .logo-glow-ring {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 120px;
+        border: 2px solid transparent;
+        border-top-color: #00c6ff;
+        border-right-color: #38ef7d;
+        border-radius: 50%;
+        filter: blur(15px);
+        opacity: 0.4;
+    }
+
+    .main-logo-img {
+        height: 80px;
+        width: 80px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 25px rgba(124, 58, 237, 0.6));
+        animation: logo-pulse 2s infinite alternate;
+    }
+
+    .main-brand-title {
+        font-size: 3.2rem;
+        font-weight: 900;
+        letter-spacing: 0.2rem;
+        margin: 0;
+        color: #ffffff;
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.4),
+            0 0 20px rgba(124, 58, 237, 0.4),
+            0 0 40px rgba(59, 130, 246, 0.4);
+        animation: text-glow 2s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes logo-pulse {
+    from {
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px rgba(124, 58, 237, 0.5));
+    }
+    to {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 35px rgba(124, 58, 237, 0.8));
+    }
+}
+
+@keyframes text-glow {
+    from {
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.4),
+            0 0 20px rgba(124, 58, 237, 0.4),
+            0 0 30px rgba(59, 130, 246, 0.4);
+    }
+    to {
+        text-shadow:
+            0 0 20px rgba(255, 255, 255, 0.8),
+            0 0 40px rgba(124, 58, 237, 0.8),
+            0 0 60px rgba(59, 130, 246, 0.8);
+    }
+}
+
+.system-status-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        justify-content: center;
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #38ef7d;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #38ef7d;
+            animation: pulse-green 1.5s ease-in-out infinite;
+        }
+
+        .status-label {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.2rem;
+        }
+    }
+
+    .progress-meter {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffa500, #ff444f, #00c6ff);
+            background-size: 200% auto;
+            animation: flow 3s linear infinite;
+            box-shadow: 0 0 15px rgba(255, 68, 79, 0.4);
+        }
+    }
+
+    .message-carousel {
+        height: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        .loading-status-msg {
+            font-size: 1.2rem;
+            color: #ffffff;
+            font-weight: 500;
+            letter-spacing: 0.05rem;
+            text-align: center;
+            opacity: 0.8;
+        }
+    }
+}
+
+.customer-care-cta {
+    width: 100%;
+
+    .whatsapp-support-btn {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 1.5rem 2rem;
+        background: rgba(37, 211, 102, 0.05);
+        border: 1px solid rgba(37, 211, 102, 0.2);
+        border-radius: 1.6rem;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+
+        &:hover {
+            background: rgba(37, 211, 102, 0.1);
+            border-color: rgba(37, 211, 102, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(37, 211, 102, 0.1);
+
+            .wa-icon {
+                transform: scale(1.1) rotate(-5deg);
+            }
+        }
+
+        .wa-icon {
+            font-size: 2.4rem;
+            transition: all 0.3s ease;
+        }
+
+        .wa-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+
+            .wa-label {
+                font-size: 0.9rem;
+                font-weight: 700;
+                color: #25d366;
+                letter-spacing: 0.1rem;
+            }
+
+            .wa-number {
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: #ffffff;
+                letter-spacing: 0.05rem;
+            }
+        }
+    }
+}
+
+.loader-footer-simple {
+    position: absolute;
+    bottom: 3rem;
+    z-index: 10;
+
+    .powered-tag {
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.4rem;
+        color: rgba(148, 163, 184, 0.4);
+        text-transform: uppercase;
+    }
+}
+
+@keyframes slow-drift {
+    from {
+        transform: translate(-10%, -10%) rotate(0deg);
+    }
+
+    to {
+        transform: translate(10%, 10%) rotate(5deg);
+    }
+}
+
+@keyframes flow {
+    to {
+        background-position: 200% center;
+    }
+}
+
+@keyframes pulse-green {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .loader-content-wrap {
+        width: 90%;
+        padding: 2rem;
+    }
+
+    .logo-section .main-brand-title {
+        font-size: 2rem;
+        letter-spacing: 0.3rem;
+    }
+
+    .customer-care-cta .whatsapp-support-btn .wa-number {
+        font-size: 1.2rem;
+    }
+}
