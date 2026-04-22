@@ -38,14 +38,22 @@ interface MarketAnalysis {
     ticks: number[];
     evenPct: number;
     oddPct: number;
-    overPct: number; // digits 5-9
-    underPct: number; // digits 0-4
+    overPct: number;
+    underPct: number;
     risePct: number;
     fallPct: number;
-    differsBest: number; // safest digit to differ
-    matchesBest: number; // hottest digit to match
-    deviation: number; // how far the dominant side is from 50%
-    confidence: number; // 0-100
+    differsBest: number;
+    matchesBest: number;
+    highestDigit: number;
+    secondHighestDigit: number;
+    lowestDigit: number;
+    highestUnderDigit: number; // 0-4
+    highestOverDigit: number; // 5-9
+    mostIncreasingDigit: number;
+    freqMap: Record<number, number>;
+    powerTrend: Record<number, number>; // 1 = increasing, 0 = stable, -1 = decreasing
+    deviation: number;
+    confidence: number;
     signal: string;
     entry: string;
     tradeType: string;
@@ -60,113 +68,130 @@ function analyseMarket(
     tradeType: string,
     thresholds: { eo: number, ou: number, rf: number } = { eo: 7, ou: 7, rf: 8 }
 ): MarketAnalysis {
-    const last = digits.slice(-120);
-    const total = last.length || 1;
+    const last15 = digits.slice(-15);
+    const prev15 = digits.slice(-30, -15);
+    const total15 = last15.length || 1;
+
+    // Digit frequency for last 15
+    const freq15: Record<number, number> = {};
+    for (let d = 0; d < 10; d++) freq15[d] = 0;
+    last15.forEach(d => freq15[d]++);
+
+    const sorted15 = Object.entries(freq15).sort((a, b) => b[1] - a[1]);
+    const highestDigit = Number(sorted15[0][0]);
+    const secondHighestDigit = Number(sorted15[1][0]);
+    const lowestDigit = Number(sorted15[sorted15.length - 1][0]);
+
+    // Power trend: compare freq in last 15 vs previous 15
+    const freqPrev: Record<number, number> = {};
+    for (let d = 0; d < 10; d++) freqPrev[d] = 0;
+    prev15.forEach(d => freqPrev[d]++);
+
+    const powerTrend: Record<number, number> = {};
+    let maxIncrease = -100;
+    let mostIncreasingDigit = highestDigit;
+
+    for (let d = 0; d < 10; d++) {
+        const diff = freq15[d] - freqPrev[d];
+        powerTrend[d] = diff > 0 ? 1 : diff < 0 ? -1 : 0;
+        if (diff > maxIncrease) {
+            maxIncrease = diff;
+            mostIncreasingDigit = d;
+        }
+    }
 
     const even = last.filter(d => d % 2 === 0).length;
     const odd = total - even;
     const over = last.filter(d => d >= 5).length;
     const under = total - over;
 
-    let rises = 0,
-        falls = 0;
+    const evenPct = (even / total) * 100;
+    const oddPct = (odd / total) * 100;
+    const overPct = (over / total) * 100;
+    const underPct = (under / total) * 100;
+
+    let rises = 0, falls = 0;
     for (let i = 1; i < last.length; i++) {
         if (last[i] > last[i - 1]) rises++;
         else if (last[i] < last[i - 1]) falls++;
     }
     const rf_total = rises + falls || 1;
-
-    // Digit frequency map
-    const freq: Record<number, number> = {};
-    for (let d = 0; d < 10; d++) freq[d] = 0;
-    last.forEach(d => {
-        if (d >= 0 && d <= 9) freq[d]++;
-    });
-
-    const evenPct = (even / total) * 100;
-    const oddPct = (odd / total) * 100;
-    const overPct = (over / total) * 100;
-    const underPct = (under / total) * 100;
     const risePct = (rises / rf_total) * 100;
     const fallPct = (falls / rf_total) * 100;
 
-    // Hottest / coldest digit
+    const freq: Record<number, number> = {};
+    for (let d = 0; d < 10; d++) freq[d] = 0;
+    last.forEach(d => { if (d >= 0 && d <= 9) freq[d]++; });
     const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
     const matchesBest = Number(sorted[0][0]);
     const differsBest = Number(sorted[sorted.length - 1][0]);
 
-    let deviation = 0,
-        signal = 'STANDBY',
-        entry = '',
-        prediction: number | number[] | null = null,
-        score = 0;
+    let deviation = 0, signal = 'STANDBY', entry = '', prediction: number | number[] | null = null, score = 0;
 
     switch (tradeType) {
         case 'EVENODD': {
             const dom = evenPct > oddPct ? 'EVEN' : 'ODD';
             deviation = Math.abs(evenPct - oddPct);
             score = Math.min(deviation * 3, 100);
-            if (deviation >= thresholds.eo) {
-                signal = dom === 'EVEN' ? 'BUY EVEN' : 'BUY ODD';
-                entry = dom;
-            }
+            if (deviation >= thresholds.eo) { signal = dom === 'EVEN' ? 'BUY EVEN' : 'BUY ODD'; entry = dom; }
             break;
         }
         case 'OVERUNDER': {
-            const dom = overPct > underPct ? 'OVER' : 'UNDER';
-            deviation = Math.abs(overPct - underPct);
-            score = Math.min(deviation * 3, 100);
-            if (deviation >= thresholds.ou) {
-                signal = dom === 'OVER' ? 'BUY OVER' : 'BUY UNDER';
-                entry = dom;
-                
-                if (dom === 'OVER') {
-                    // Suggest barriers for Over: If Over 0 is > 55%
-                    prediction = overPct > 55 ? [0, 1, 2, 3] : 0;
-                } else {
-                    // Suggest barriers for Under: If Under 9 is > 55%
-                    prediction = underPct > 55 ? [9, 8, 7, 6] : 9;
-                }
-            }
-            break;
-        }
-        case 'RISEFALL': {
-            const dom = risePct > fallPct ? 'RISE' : 'FALL';
-            deviation = Math.abs(risePct - fallPct);
-            score = Math.min(deviation * 2.5, 100);
-            if (deviation >= thresholds.rf) {
-                signal = dom === 'RISE' ? 'BUY RISE' : 'BUY FALL';
-                entry = dom;
-            }
-            break;
-        }
-        case 'DIFFERS': {
-            const leastFreq = sorted[sorted.length - 1][1];
-            const leastDigit = Number(sorted[sorted.length - 1][0]);
-            const leastPct = (leastFreq / total) * 100;
-            deviation = 10 - leastPct;
-            score = Math.min(deviation * 5, 100);
-            if (score >= 40) {
-                signal = `DIFFER ${leastDigit}`;
-                entry = `Avoid digit ${leastDigit}`;
-                prediction = leastDigit;
+            // New logic for Over/Under: 15-tick based
+            const overDigits = last15.filter(d => d >= 5);
+            const underDigits = last15.filter(d => d < 5);
+            
+            const ouFreq: Record<number, number> = {};
+            for (let d = 0; d < 10; d++) ouFreq[d] = 0;
+            last15.forEach(d => ouFreq[d]++);
+            
+            const sortedUnder = Object.entries(ouFreq).filter(([d]) => Number(d) < 5).sort((a, b) => b[1] - a[1]);
+            const sortedOver = Object.entries(ouFreq).filter(([d]) => Number(d) >= 5).sort((a, b) => b[1] - a[1]);
+            
+            const highestUnderDigit = Number(sortedUnder[0][0]);
+            const highestOverDigit = Number(sortedOver[0][0]);
+            
+            const ovPct = (overDigits.length / total15) * 100;
+            const unPct = (underDigits.length / total15) * 100;
+            
+            deviation = Math.abs(ovPct - unPct);
+            score = Math.min(deviation * 8, 100);
+            
+            if (deviation >= 15) {
+                const dom = ovPct > unPct ? 'OVER' : 'UNDER';
+                signal = dom === 'OVER' ? `BUY OVER ${highestOverDigit}` : `BUY UNDER ${highestUnderDigit}`;
+                entry = `H-Under: ${highestUnderDigit} | H-Over: ${highestOverDigit}`;
+                prediction = dom === 'OVER' ? highestOverDigit : highestUnderDigit;
             }
             break;
         }
         case 'MATCHES': {
-            const mostFreq = sorted[0][1];
-            const mostDigit = Number(sorted[0][0]);
-            const mostPct = (mostFreq / total) * 100;
-            deviation = mostPct - 10;
+            // New logic for Matches: 15-tick based
+            const hPct = (freq15[highestDigit] / total15) * 100;
+            deviation = hPct - 10;
+            score = Math.min(deviation * 10, 100);
+            
+            // Multiple predictions: Top 3 (Highest, 2nd Highest, Most Increasing)
+            const preds = Array.from(new Set([highestDigit, secondHighestDigit, mostIncreasingDigit]));
+            
+            if (hPct >= 15) { // Match probability trigger
+                signal = `MATCH ${highestDigit}`;
+                entry = `Ranked: H:${highestDigit} 2nd:${secondHighestDigit} L:${lowestDigit} | Incr:${mostIncreasingDigit}`;
+                prediction = preds;
+            }
+            break;
+        }
+        case 'DIFFERS': {
+            // Updated Differs: focus on highest and increasing (since they are likely to repeat, so we avoid them? No, user says "analyse highest and increasing" maybe to suggest what to avoid)
+            // But wait, user said "Now on differs should analyse the highest and increasing power digits. Since this is an indication of highest increasing"
+            // Usually on differs we avoid the most frequent.
+            const mostDigit = highestDigit;
+            deviation = (freq15[mostDigit] / total15) * 100;
             score = Math.min(deviation * 8, 100);
-            
-            // Multiple predictions for matches: top 3 hottest digits
-            const top3 = sorted.slice(0, 3).map(s => Number(s[0]));
-            
-            if (score >= 30) {
-                signal = `MATCH ${mostDigit}`;
-                entry = `Target digit ${mostDigit}`;
-                prediction = top3;
+            if (deviation >= 15) {
+                signal = `DIFFER ${mostDigit}`;
+                entry = `Avoid ${mostDigit} (Power Increasing)`;
+                prediction = mostDigit;
             }
             break;
         }
@@ -174,25 +199,17 @@ function analyseMarket(
 
     const confidence = Math.min(score * (Math.min(total, 120) / 120), 100);
 
+    const sortedUnder = Object.entries(freq15).filter(([d]) => Number(d) < 5).sort((a, b) => b[1] - a[1]);
+    const sortedOver = Object.entries(freq15).filter(([d]) => Number(d) >= 5).sort((a, b) => b[1] - a[1]);
+    const highestUnderDigit = Number(sortedUnder[0][0]);
+    const highestOverDigit = Number(sortedOver[0][0]);
+
     return {
-        symbol,
-        label,
-        ticks: last,
-        evenPct,
-        oddPct,
-        overPct,
-        underPct,
-        risePct,
-        fallPct,
-        differsBest,
-        matchesBest,
-        deviation,
-        confidence,
-        signal: signal || 'STANDBY',
-        entry,
-        tradeType,
-        prediction,
-        score,
+        symbol, label, ticks: last, evenPct, oddPct, overPct, underPct, risePct, fallPct,
+        differsBest, matchesBest, highestDigit, secondHighestDigit, lowestDigit, 
+        highestUnderDigit, highestOverDigit, mostIncreasingDigit,
+        freqMap: freq15, powerTrend, deviation, confidence,
+        signal: signal || 'STANDBY', entry, tradeType, prediction, score,
     };
 }
 
@@ -240,6 +257,8 @@ const SignalCentreTab = observer(() => {
     const [evenOddThreshold, setEvenOddThreshold] = useState(7);
     const [overUnderThreshold, setOverUnderThreshold] = useState(7);
     const [riseFallThreshold, setRiseFallThreshold] = useState(8);
+    const [isReversal, setIsReversal] = useState(false);
+    const [nextTicksToTrade, setNextTicksToTrade] = useState(0);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
 
@@ -487,25 +506,80 @@ const SignalCentreTab = observer(() => {
         addLog(`🤖 Bot Started | Strategy: ${tradeType} | Stake: ${stake}`);
 
         while (botRef.current) {
-            let currentAnalysis = bestSignal;
-            
+            // Re-fetch digits to check for pattern/power changes
+            const sym = bestSignal.symbol;
+            const digits = await subscribeSymbol(sym);
+            if (digits.length < 30) { await new Promise(r => setTimeout(r, 2000)); continue; }
+
+            const analysis = analyseMarket(sym, bestSignal.label, digits, tradeType, {
+                eo: evenOddThreshold,
+                ou: overUnderThreshold,
+                rf: riseFallThreshold
+            });
+
+            let shouldTrade = false;
+            let currentAnalysis = analysis;
+
+            if (tradeType === 'MATCHES') {
+                const target = manualPrediction !== null ? manualPrediction : analysis.highestDigit;
+                const isIncreasing = analysis.powerTrend[target] === 1;
+                const last5 = digits.slice(-5);
+                const patternMatch = last5.some(d => d === analysis.highestDigit || d === analysis.secondHighestDigit || d === analysis.lowestDigit);
+                
+                if (isIncreasing || patternMatch) shouldTrade = true;
+            } else if (tradeType === 'OVERUNDER') {
+                const last5 = digits.slice(-5);
+                const isOverDom = last5.filter(d => d >= 5).length >= 3;
+                const isUnderDom = last5.filter(d => d < 5).length >= 3;
+                const lastTick = digits[digits.length - 1];
+
+                // Trigger if highest digit appears on chosen side
+                const targetDigit = analysis.prediction as number;
+                const patternMatch = (analysis.entry.includes('OVER') && isOverDom) || (analysis.entry.includes('UNDER') && isUnderDom);
+                
+                if (patternMatch && lastTick === targetDigit) {
+                    shouldTrade = true;
+                }
+
+                // "If trading over the hishest, 2nd highest and lowest are over then trade over when the digits appear in then next three ticks."
+                if (analysis.highestDigit >= 5 && analysis.secondHighestDigit >= 5 && analysis.lowestDigit >= 5) {
+                    if (patternMatch && nextTicksToTrade === 0) setNextTicksToTrade(3);
+                }
+
+                if (nextTicksToTrade > 0) {
+                    shouldTrade = true;
+                    setNextTicksToTrade(prev => prev - 1);
+                }
+
+                if (isReversal) {
+                    currentAnalysis = { 
+                        ...analysis, 
+                        entry: analysis.entry.includes('OVER') ? 'UNDER' : 'OVER',
+                        prediction: analysis.entry.includes('OVER') ? analysis.highestUnderDigit : analysis.highestOverDigit
+                    };
+                }
+            } else {
+                shouldTrade = analysis.signal !== 'STANDBY';
+            }
+
+            if (!shouldTrade) {
+                // addLog(`⏳ Waiting for Entry Condition...`);
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
+            }
+
             // Override with manual prediction if set
-            if (manualPrediction !== null && currentAnalysis) {
-                currentAnalysis = { ...currentAnalysis, prediction: manualPrediction };
+            if (manualPrediction !== null) {
+                currentAnalysis = { ...analysis, prediction: manualPrediction };
             }
 
             if (alternateMarket && consecutiveLosses >= alternateAfterLosses) {
                 addLog(`🔄 Recovery Mode: Switching to ${alternateMarketSymbol} (${alternateTradeType})`);
-                // Create a synthetic analysis for the alternate market
                 currentAnalysis = { 
-                    ...bestSignal, 
+                    ...analysis, 
                     symbol: alternateMarketSymbol, 
                     tradeType: alternateTradeType,
-                    entry: alternateTradeType === 'EVENODD' ? 'EVEN' : 
-                           alternateTradeType === 'OVERUNDER' ? 'OVER' :
-                           alternateTradeType === 'RISEFALL' ? 'RISE' : 
-                           alternateTradeType === 'MATCHES' ? 'MATCH' : 'DIFF',
-                    prediction: alternateTradeType === 'OVERUNDER' ? 0 : 0
+                    prediction: 0
                 };
             }
 
@@ -513,9 +587,10 @@ const SignalCentreTab = observer(() => {
             const ids: string[] = [];
 
             if (tradeType === 'MATCHES' && useMultipleMatches) {
-                for (const pred of matchPredictions) {
+                const preds = Array.isArray(currentAnalysis.prediction) ? currentAnalysis.prediction : [currentAnalysis.prediction ?? 0];
+                for (const pred of preds.slice(0, 3)) {
                     for (let i = 0; i < bulkTrades; i++) {
-                        const id = await executeTrade(currentAnalysis, currentStake, pred);
+                        const id = await executeTrade(currentAnalysis, currentStake, Number(pred));
                         if (id) ids.push(id);
                         await new Promise(r => setTimeout(r, 300)); 
                     }
@@ -536,7 +611,6 @@ const SignalCentreTab = observer(() => {
 
             addLog(`📤 ${ids.length} Trade(s) placed on ${currentAnalysis.symbol}`);
             const results = await Promise.all(ids.map(id => waitForResult(id!)));
-            
             let batchP = 0, batchW = 0, batchL = 0;
             results.forEach(res => {
                 if (!res) return;
@@ -683,14 +757,12 @@ const SignalCentreTab = observer(() => {
                                         )}
                                         {tradeType === 'OVERUNDER' && (
                                             <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>OVER {analysis.overPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.overPct}%` }} /></div>
-                                                </div>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>UNDER {analysis.underPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.underPct}%` }} /></div>
-                                                </div>
+                                                <div className='sc-stat-label'>UNDER (0-4): <span className='val'>{analysis.underPct.toFixed(1)}%</span></div>
+                                                <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.underPct}%` }} /></div>
+                                                <div className='sc-stat-label mt-2'>OVER (5-9): <span className='val'>{analysis.overPct.toFixed(1)}%</span></div>
+                                                <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.overPct}%` }} /></div>
+                                                <div className='sc-stat-label mt-2'>H-UNDER: <span className='val'>{analysis.highestUnderDigit}</span></div>
+                                                <div className='sc-stat-label'>H-OVER: <span className='val'>{analysis.highestOverDigit}</span></div>
                                             </div>
                                         )}
                                         {tradeType === 'RISEFALL' && (
@@ -707,8 +779,10 @@ const SignalCentreTab = observer(() => {
                                         )}
                                         {tradeType === 'MATCHES' && (
                                             <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-label'>HOTTEST: <span className='val'>{analysis.matchesBest}</span></div>
-                                                <div className='sc-stat-label'>CONFIDENCE: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
+                                                <div className='sc-stat-label'>HIGHEST: <span className='val'>{analysis.highestDigit}</span> <span className={classNames('trend', { up: analysis.powerTrend[analysis.highestDigit] === 1 })}>{analysis.powerTrend[analysis.highestDigit] === 1 ? '▲' : ''}</span></div>
+                                                <div className='sc-stat-label'>2nd HIGH: <span className='val'>{analysis.secondHighestDigit}</span></div>
+                                                <div className='sc-stat-label'>LOWEST: <span className='val'>{analysis.lowestDigit}</span></div>
+                                                <div className='sc-stat-label'>POWER: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
                                             </div>
                                         )}
                                         {tradeType === 'DIFFERS' && (
@@ -802,6 +876,12 @@ const SignalCentreTab = observer(() => {
                     </button>
                     <button className={classNames('sc-toggle-btn', { active: alternateMarket })} onClick={() => setAlternateMarket(!alternateMarket)}>
                         🔀 Recovery Mode
+                    </button>
+                    <button className={classNames('sc-toggle-btn', { active: useMultipleMatches })} onClick={() => setUseMultipleMatches(!useMultipleMatches)}>
+                        🎯 Multiple Predictions
+                    </button>
+                    <button className={classNames('sc-toggle-btn', { active: isReversal })} onClick={() => setIsReversal(!isReversal)}>
+                        🔄 Reversal
                     </button>
                     <button className={classNames('sc-toggle-btn', { active: showAdvanced })} onClick={() => setShowAdvanced(!showAdvanced)}>
                         ⚙️ Advanced

@@ -410,7 +410,12 @@
 .sc-stat-label {
     font-size: 11px;
     color: var(--sc-text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     .val { color: var(--strategy-color, #fff); font-weight: 800; }
+    .trend { font-size: 10px; margin-left: 4px; color: var(--sc-text-muted); }
+    .trend.up { color: var(--sc-emerald); text-shadow: 0 0 10px var(--sc-emerald); }
 }
 
 .sc-market-card__footer {
