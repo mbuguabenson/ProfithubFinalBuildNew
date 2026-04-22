@@ -192,19 +192,18 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
 /* ─────────────────────── MAIN COMPONENT ─────────────────────── */
 
 const SignalCentreTab = observer(() => {
-    const { smart_trading, common } = useStore();
+    const { common, smart_trading } = useStore();
     const { is_socket_opened } = common;
+    const currency = smart_trading?.root_store?.client?.currency || 'USD';
 
     // ── Local state ──
     const [tradeType, setTradeType] = useState<string>('EVENODD');
     const [isScanning, setIsScanning] = useState(false);
     const [scanPhase, setScanPhase] = useState<string>('STANDBY');
     const [scanningIndex, setScanningIndex] = useState(-1);
-    const [marketData, setMarketData] = useState<Record<string, { ticks: number[]; price: string }>>({});
     const [analyses, setAnalyses] = useState<MarketAnalysis[]>([]);
     const [bestSignal, setBestSignal] = useState<MarketAnalysis | null>(null);
     const [validity, setValidity] = useState(0);
-    const [hasFired, setHasFired] = useState(false);
 
     // Bot settings
     const [stake, setStake] = useState(1.0);
@@ -217,17 +216,17 @@ const SignalCentreTab = observer(() => {
     const [botPL, setBotPL] = useState(0);
     const [botWins, setBotWins] = useState(0);
     const [botLosses, setBotLosses] = useState(0);
-    const [currentBotStake, setCurrentBotStake] = useState(1.0);
     const [ticks, setTicks] = useState(1);
     const [bulkTrades, setBulkTrades] = useState(1);
     const [compoundStake, setCompoundStake] = useState(false);
     const [alternateMarket, setAlternateMarket] = useState(false);
-    const [alternateAfterLosses, setAlternateAfterLosses] = useState(3);
-    const [alternateMarketSymbol, setAlternateMarketSymbol] = useState('R_10');
-    const [alternateTradeType, setAlternateTradeType] = useState('EVENODD');
+    const [alternateAfterLosses] = useState(3);
+    const [alternateMarketSymbol] = useState('R_10');
+    const [alternateTradeType] = useState('EVENODD');
     const [consecutiveLosses, setConsecutiveLosses] = useState(0);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [activeDashboardTab, setActiveDashboardTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
+
     const [useMultipleMatches, setUseMultipleMatches] = useState(false);
     const [matchPredictions, setMatchPredictions] = useState<number[]>([0]);
 
@@ -278,13 +277,10 @@ const SignalCentreTab = observer(() => {
                             if (!isNaN(dig)) {
                                 acc.push(dig);
                                 if (acc.length > 120) acc.shift();
-                                setMarketData(prev => ({
-                                    ...prev,
-                                    [sym]: { ticks: [...acc], price: String(msg.tick.quote) },
-                                }));
                             }
                         }
                     });
+
 
                     subsRef.current.set(sym, () => {
                         sub.unsubscribe();
@@ -387,30 +383,51 @@ const SignalCentreTab = observer(() => {
         try {
             const req: any = {
                 proposal: 1, amount: stakeAmt, basis: 'stake', contract_type: contractType,
-                currency: 'USD', duration: ticks, duration_unit: 't', symbol: analysis.symbol,
+                currency: currency, duration: ticks, duration_unit: 't', symbol: analysis.symbol,
             };
             if (barrier !== undefined) req.barrier = barrier;
             const resp = await api.send(req);
-            if (resp.error) return null;
+            if (resp.error) {
+                addLog(`❌ Proposal Error: ${resp.error.message}`);
+                return null;
+            }
             const buy = await api.send({ buy: resp.proposal.id, price: stakeAmt });
+            if (buy.error) {
+                addLog(`❌ Buy Error: ${buy.error.message}`);
+                return null;
+            }
             return buy.buy?.contract_id || null;
-        } catch (e) { return null; }
-    }, [is_socket_opened, ticks]);
+        } catch (e: any) { 
+            addLog(`❌ Execution Exception: ${e.message || e}`);
+            return null; 
+        }
+    }, [is_socket_opened, ticks, currency]);
+
 
     const waitForResult = (id: string | number): Promise<{status: string, profit: number} | null> => {
         return new Promise(resolve => {
             const api = api_base_ref.current;
             if (!api) { resolve(null); return; }
-            const sub = api.subscribe({ proposal_open_contract: 1, contract_id: id }, (msg: any) => {
+            
+            // Subscribe to POC for this contract
+            api.send({ proposal_open_contract: 1, contract_id: id, subscribe: 1 });
+
+            const sub = api.onMessage().subscribe((msg: any) => {
                 const poc = msg.proposal_open_contract;
-                if (poc?.is_sold) {
+                if (poc && poc.contract_id == id && poc.is_sold) {
                     sub.unsubscribe();
                     resolve({ status: poc.status, profit: parseFloat(poc.profit || '0') });
                 }
             });
-            setTimeout(() => { sub.unsubscribe(); resolve(null); }, 20000);
+            
+            // Timeout after 30 seconds
+            setTimeout(() => { 
+                sub.unsubscribe(); 
+                resolve(null); 
+            }, 30000);
         });
     };
+
 
     const addLog = (msg: string) => {
         const ts = new Date().toLocaleTimeString();
@@ -421,6 +438,7 @@ const SignalCentreTab = observer(() => {
         if (!bestSignal || !isBotRunning) return;
         botRef.current = true;
         botStakeRef.current = stake;
+        let runningPL = 0;
         setConsecutiveLosses(0);
         addLog(`🤖 Bot Started | Strategy: ${tradeType} | Stake: ${stake}`);
 
@@ -458,11 +476,11 @@ const SignalCentreTab = observer(() => {
             addLog(`📤 ${ids.length} Trade(s) placed on ${currentAnalysis.symbol}`);
             const results = await Promise.all(ids.map(id => waitForResult(id!)));
             
-            let p = 0, w = 0, l = 0;
+            let batchP = 0, batchW = 0, batchL = 0;
             results.forEach(res => {
                 if (!res) return;
-                p += res.profit;
-                if (res.status === 'won') w++; else l++;
+                batchP += res.profit;
+                if (res.status === 'won') batchW++; else batchL++;
                 setTransactions(prev => [{
                     id: Math.random().toString(36).substr(2, 9),
                     time: new Date().toLocaleTimeString(),
@@ -474,33 +492,42 @@ const SignalCentreTab = observer(() => {
                 }, ...prev].slice(0, 50));
             });
 
-            setBotWins(prev => prev + w);
-            setBotLosses(prev => prev + l);
-            setBotPL(prev => prev + p);
+            runningPL += batchP;
+            setBotWins(prev => prev + batchW);
+            setBotLosses(prev => prev + batchL);
+            setBotPL(runningPL);
 
-            if (p > 0) {
+            if (batchP > 0) {
                 setConsecutiveLosses(0);
-                addLog(`✅ Wins: ${w}, Losses: ${l} | Net: +${p.toFixed(2)}`);
+                addLog(`✅ Wins: ${batchW}, Losses: ${batchL} | Net: +${batchP.toFixed(2)}`);
                 if (compoundStake) {
-                    botStakeRef.current = parseFloat((botStakeRef.current + p).toFixed(2));
+                    botStakeRef.current = parseFloat((botStakeRef.current + batchP).toFixed(2));
                     addLog(`📈 Compounding → Stake: ${botStakeRef.current}`);
                 } else botStakeRef.current = stake;
-                if (botPL + p >= tp) { addLog('🏆 Take Profit hit'); break; }
+                
+                if (runningPL >= tp) { 
+                    addLog(`🏆 Take Profit hit! Total P/L: ${runningPL.toFixed(2)}`); 
+                    break; 
+                }
             } else {
-                setConsecutiveLosses(cl => cl + 1);
-                addLog(`❌ Wins: ${w}, Losses: ${l} | Net: ${p.toFixed(2)}`);
+                setConsecutiveLosses(prev => prev + 1);
+                addLog(`❌ Wins: ${batchW}, Losses: ${batchL} | Net: ${batchP.toFixed(2)}`);
                 if (martingale) {
                     botStakeRef.current = Math.min(currentStake * martingaleMultiplier, 500);
                     addLog(`📉 Martingale → Stake: ${botStakeRef.current.toFixed(2)}`);
                 } else botStakeRef.current = stake;
-                if (Math.abs(botPL + p) >= sl) { addLog('🛑 Stop Loss hit'); break; }
+
+                if (Math.abs(runningPL) >= sl && runningPL < 0) { 
+                    addLog(`🛑 Stop Loss hit! Total P/L: ${runningPL.toFixed(2)}`); 
+                    break; 
+                }
             }
             setCurrentBotStake(botStakeRef.current);
             await new Promise(r => setTimeout(r, 1000));
         }
         setIsBotRunning(false);
         botRef.current = false;
-    }, [bestSignal, isBotRunning, stake, tp, sl, martingale, martingaleMultiplier, bulkTrades, compoundStake, alternateMarket, alternateAfterLosses, alternateMarketSymbol, alternateTradeType, consecutiveLosses, botPL, executeTrade, tradeType]);
+    }, [bestSignal, isBotRunning, stake, tp, sl, martingale, martingaleMultiplier, bulkTrades, compoundStake, alternateMarket, alternateAfterLosses, alternateMarketSymbol, alternateTradeType, consecutiveLosses, executeTrade, tradeType, useMultipleMatches, matchPredictions]);
 
     useEffect(() => {
         if (isBotRunning) runBotLoop();
