@@ -1,516 +1,278 @@
-// ── Matches Killer – Amber Intelligence Design ──────────────────────────────
-// Concept from Digit Cracker Matches, distinctly amber-accented
-
-.mkill-wrapper {
+.mkill-modern-wrapper {
+    padding: 1rem;
+    background: #020617; // slate-950
+    color: #e2e8f0; // slate-200
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
-    padding: 1.2rem;
-    font-family: var(--font-body);
-    color: #e2e8f0;
+    gap: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 
-    // ── Glass Panel ────────────────────────────────────────────────────────
-    .mkill-panel {
-        background: rgba(245, 158, 11, 0.04);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(245, 158, 11, 0.12);
-        border-radius: 14px;
-        padding: 1.2rem 1.4rem;
-        transition: border-color 0.3s ease;
-
-        &:hover {
-            border-color: rgba(245, 158, 11, 0.25);
-        }
-
-        &__title {
-            font-family: var(--font-display);
-            font-size: 0.65rem;
-            font-weight: 800;
-            letter-spacing: 1.8px;
-            text-transform: uppercase;
-            color: rgba(245, 158, 11, 0.7);
-            margin-bottom: 1rem;
-        }
-    }
-
-    // ── Header ─────────────────────────────────────────────────────────────
-    .mkill-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        h2 {
-            font-family: var(--font-display);
-            font-size: 1.3rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #fff 40%, #f59e0b);
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            letter-spacing: -0.3px;
-        }
-
-        .mkill-auto-toggle {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            padding: 0.4rem 0.9rem;
-            border-radius: 99px;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            background: rgba(245, 158, 11, 0.06);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.65rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #94a3b8;
-
-            &.active {
-                border-color: rgba(245, 158, 11, 0.5);
-                background: rgba(245, 158, 11, 0.12);
-                color: #f59e0b;
-            }
-
-            .mkill-dot {
-                width: 7px;
-                height: 7px;
-                border-radius: 50%;
-                background: #334155;
-                transition: background 0.2s;
-
-                &.on {
-                    background: #f59e0b;
-                    box-shadow: 0 0 6px #f59e0b;
-                }
-            }
-        }
-    }
-
-    // ── Entry Gate ─────────────────────────────────────────────────────────
-    .mkill-gate {
-        display: flex;
-        align-items: center;
-        gap: 1.2rem;
-
-        .mkill-gate-stages {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .mkill-stage-dot {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.65rem;
-            font-weight: 900;
-            font-family: var(--font-display);
-            border: 1.5px solid rgba(255, 255, 255, 0.08);
-            background: rgba(0, 0, 0, 0.3);
-            color: rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-
-            &.active {
-                border-color: #f59e0b;
-                background: rgba(245, 158, 11, 0.15);
-                color: #f59e0b;
-                box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-            }
-        }
-
-        .mkill-gate-status {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #64748b;
-            flex: 1;
-            line-height: 1.4;
-        }
-    }
-
-    // ── Split Layout ───────────────────────────────────────────────────────
-    .mkill-split {
-        display: grid;
-        grid-template-columns: 1fr 300px;
-        gap: 1rem;
-
-        @media (max-width: 900px) {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    // ── Digit Intel Table ──────────────────────────────────────────────────
-    .mkill-intel-table {
-        .mkill-table-head,
-        .mkill-table-row {
-            display: grid;
-            grid-template-columns: 50px 40px 70px 55px 1fr;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.7rem;
-            padding: 0.5rem 0.4rem;
-        }
-
-        .mkill-table-head {
-            font-family: var(--font-display);
-            font-weight: 800;
-            color: rgba(255, 255, 255, 0.25);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 0.3rem;
-        }
-
-        .mkill-table-row {
-            border-radius: 8px;
-            transition: background 0.2s;
-            font-weight: 600;
-
-            &:hover {
-                background: rgba(255, 255, 255, 0.03);
-            }
-
-            &.is-latest {
-                background: rgba(245, 158, 11, 0.07);
-                border: 1px solid rgba(245, 158, 11, 0.15);
-            }
-
-            .mkill-digit-cell {
-                display: flex;
-                align-items: center;
-                gap: 0.35rem;
-                font-family: var(--font-mono);
-                font-size: 0.95rem;
-                font-weight: 900;
-                color: #fff;
-
-                .mkill-rank-badge {
-                    font-size: 0.5rem;
-                    font-weight: 900;
-                    padding: 1px 4px;
-                    border-radius: 3px;
-                    font-family: var(--font-display);
-                }
-            }
-
-            .mkill-power-bar {
-                height: 4px;
-                border-radius: 99px;
-                background: rgba(0, 0, 0, 0.4);
-                overflow: hidden;
-
-                .mkill-power-fill {
-                    height: 100%;
-                    border-radius: 99px;
-                    transition: width 0.5s ease;
-                }
-            }
-        }
-    }
-
-    // ── Status Badge ───────────────────────────────────────────────────────
-    .mkill-status-badge {
-        display: inline-block;
-        font-size: 0.55rem;
-        font-weight: 800;
-        font-family: var(--font-display);
-        padding: 2px 6px;
-        border-radius: 4px;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-
-        &.clean {
-            background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        &.warn {
-            background: rgba(245, 158, 11, 0.15);
-            color: #f59e0b;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        &.avoid {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-    }
-
-    // ── Controls Column ────────────────────────────────────────────────────
-    .mkill-controls {
+    .max-w-7xl {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 0.8rem;
+        gap: 1.5rem;
     }
 
-    // ── Prediction Tunnels ─────────────────────────────────────────────────
-    .mkill-prediction-slots {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-        margin-top: 0.2rem;
+    // ── Global Typography & Utils ─────────────────────────────────────────
+    .tracking-widest { letter-spacing: 0.1em; }
+    .uppercase { text-transform: uppercase; }
+    .font-black { font-weight: 900; }
+    .font-bold { font-weight: 700; }
 
-        .mkill-slot {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.2rem;
+    // ── 1. Massive Digital Header Card ────────────────────────────────────
+    .mkill-hero-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.5rem;
+        background: rgba(15, 23, 42, 0.8); // slate-900/80
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(99, 102, 241, 0.2); // indigo-500/20
+        padding: 1.5rem;
+        box-shadow: 0 0 50px -12px rgba(99, 102, 241, 0.2);
 
-            label {
-                font-size: 0.55rem;
-                color: #475569;
-                font-weight: 700;
+        .hero-glow-1 { position: absolute; top: -8rem; left: -8rem; width: 16rem; height: 16rem; background: rgba(79, 70, 229, 0.2); border-radius: 50%; filter: blur(48px); }
+        .hero-glow-2 { position: absolute; top: 50%; right: 2.5rem; width: 24rem; height: 24rem; background: rgba(147, 51, 234, 0.1); border-radius: 50%; filter: blur(48px); }
+
+        .hero-content { 
+            position: relative; z-index: 10; 
+            display: flex; flex-wrap: wrap; width: 100%; 
+            justify-content: space-between; align-items: center; gap: 1.5rem;
+        }
+
+        .market-info {
+            flex: 1 1 200px;
+            .market-label { color: #818cf8; font-size: 0.875rem; font-weight: 900; margin-bottom: 0.25rem; }
+            .market-name { font-size: 2.5rem; color: #fff; margin-bottom: 0.5rem; text-shadow: 0 4px 6px rgba(0,0,0,0.1); line-height: 1.2; word-break: break-word; }
+            .price-label { color: #94a3b8; font-size: 0.75rem; }
+            .price-val { font-family: var(--font-mono); font-size: 2rem; color: #e2e8f0; }
+        }
+
+        .hud-center {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(2, 6, 23, 0.5); border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 50%; width: 12rem; height: 12rem;
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
+            position: relative; margin: 0 auto;
+
+            .hud-spin {
+                position: absolute; inset: 0; border-radius: 50%;
+                border: 4px solid transparent; border-top-color: #6366f1; border-right-color: #6366f1;
+                opacity: 0.5; animation: spin-slow 3s linear infinite;
             }
+            .hud-label { color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.5rem; }
+            .hud-val { font-size: 4.5rem; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.3); line-height: 1; }
+        }
 
-            input {
-                width: 100%;
-                background: rgba(0, 0, 0, 0.35);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 8px;
-                color: #fff;
-                font-family: var(--font-mono);
-                font-size: 1rem;
-                font-weight: 900;
-                text-align: center;
-                padding: 0.5rem;
-                outline: none;
-                transition: border-color 0.2s;
+        .session-stats {
+            flex: 1 1 200px;
+            display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;
+            .pl-box {
+                background: rgba(2, 6, 23, 0.5); border: 1px solid rgba(51, 65, 85, 0.5);
+                border-radius: 1rem; padding: 1rem; width: 100%; max-width: 14rem; text-align: right; backdrop-filter: blur(12px);
+                .pl-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
+                .pl-val { font-size: 2rem; }
+                .pos { color: #34d399; text-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+                .neg { color: #f87171; text-shadow: 0 0 15px rgba(248, 113, 113, 0.3); }
+            }
+            .wl-row {
+                display: flex; gap: 1rem; justify-content: flex-end; width: 100%;
+                .w-badge { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #34d399; padding: 0.5rem 1rem; border-radius: 0.75rem; }
+                .l-badge { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 0.5rem 1rem; border-radius: 0.75rem; }
+            }
+        }
+    }
 
-                &:focus {
-                    border-color: rgba(245, 158, 11, 0.5);
+    @media (max-width: 1024px) {
+        .mkill-hero-card .hero-content { flex-direction: column; align-items: stretch; }
+        .mkill-hero-card .market-info { text-align: center; margin-bottom: 1rem; }
+        .mkill-hero-card .session-stats { align-items: stretch; .pl-box { max-width: none; text-align: center; } .wl-row { justify-content: center; } }
+    }
+
+    // ── Shared Card Section ───────────────────────────────────────────────
+    .mkill-section-card {
+        background: rgba(15, 23, 42, 0.6); // slate-900/60
+        border: 1px solid #1e293b; // slate-800
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        backdrop-filter: blur(24px);
+        width: 100%;
+        box-sizing: border-box;
+
+        .section-title {
+            display: flex; align-items: center; gap: 0.75rem;
+            font-size: 0.875rem; color: #94a3b8; margin-bottom: 1.5rem;
+            border-bottom: 1px solid #1e293b; padding-bottom: 0.75rem;
+        }
+    }
+
+    // ── 2. Sequential Data Stream ─────────────────────────────────────────
+    .tick-stream-bubbles {
+        display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+        .bubble {
+            width: 2.75rem; height: 2.75rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 900;
+            background: #0f172a; border: 2px solid #334155; color: #94a3b8;
+            transition: all 0.3s;
+            &.is-latest { background: #4f46e5; border-color: #818cf8; color: #fff; box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); transform: scale(1.1); z-index: 10; }
+            &.is-most { background: rgba(234, 179, 8, 0.2); border-color: rgba(234, 179, 8, 0.5); color: #facc15; }
+            &.is-least { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #f87171; }
+        }
+    }
+
+    // ── 3. Market Scanner Grid ────────────────────────────────────────────
+    .scanner-grid {
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+        gap: 1rem;
+    }
+
+    .digit-intel-modern {
+        position: relative; overflow: hidden; border-radius: 1rem; padding: 1rem;
+        border: 1px solid rgba(51, 65, 85, 0.5); background: rgba(15, 23, 42, 0.6);
+        transition: all 0.3s;
+
+        &.is-latest { transform: scale(1.02); border-color: rgba(99, 102, 241, 0.5); box-shadow: 0 0 30px rgba(99, 102, 241, 0.2); }
+        &.glow-most { box-shadow: 0 0 20px rgba(250, 204, 21, 0.3); }
+        &.glow-least { box-shadow: 0 0 20px rgba(248, 113, 113, 0.3); }
+
+        .card-glow-bg { position: absolute; top: -2.5rem; right: -2.5rem; width: 8rem; height: 8rem; border-radius: 50%; filter: blur(24px); opacity: 0.2; animation: pulse 2s infinite; }
+        &.theme-most .card-glow-bg { background: linear-gradient(to bottom right, #facc15, #ca8a04); }
+        &.theme-2nd .card-glow-bg { background: linear-gradient(to bottom right, #cbd5e1, #64748b); }
+        &.theme-least .card-glow-bg { background: linear-gradient(to bottom right, #f87171, #dc2626); }
+        &.theme-norm .card-glow-bg { background: linear-gradient(to bottom right, #6366f1, #4338ca); }
+
+        .di-header {
+            position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;
+            .di-val { font-size: 2.5rem; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+            .di-rank-box { text-align: right; .di-r-label { font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.1rem; } .di-r-val { font-size: 1.1rem; color: #e2e8f0; } }
+        }
+        
+        .di-stats {
+            position: relative; z-index: 10;
+            .di-s-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.5rem; .s-lbl { font-size: 0.75rem; color: #cbd5e1; } .s-pct { font-size: 1rem; color: #fff; } }
+            .di-progress { height: 0.4rem; background: #1e293b; border-radius: 99px; overflow: hidden; border: 1px solid rgba(51,65,85,0.5); }
+            .di-fill { height: 100%; transition: width 0.5s ease-out; }
+        }
+
+        &.theme-most .di-val { color: #facc15; } &.theme-most .di-fill { background: linear-gradient(to right, #facc15, #ca8a04); }
+        &.theme-2nd .di-val { color: #cbd5e1; } &.theme-2nd .di-fill { background: linear-gradient(to right, #cbd5e1, #64748b); }
+        &.theme-least .di-val { color: #f87171; } &.theme-least .di-fill { background: linear-gradient(to right, #f87171, #dc2626); }
+        &.theme-norm .di-val { color: #64748b; } &.theme-norm .di-fill { background: linear-gradient(to right, #6366f1, #4338ca); }
+
+        .di-spinner { position: absolute; bottom: 1rem; right: 1rem; width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid transparent; animation: spin-slow 1s linear infinite; }
+        &.theme-most .di-spinner { border-top-color: #facc15; border-right-color: #facc15; }
+        &.theme-2nd .di-spinner { border-top-color: #cbd5e1; border-right-color: #cbd5e1; }
+        &.theme-least .di-spinner { border-top-color: #f87171; border-right-color: #f87171; }
+
+        .di-elite-badge { position: absolute; top: 0; left: 0; padding: 0.25rem 0.5rem; font-size: 0.55rem; color: #000; border-bottom-right-radius: 0.5rem; }
+        &.theme-most .di-elite-badge { background: linear-gradient(to right, #facc15, #ca8a04); }
+        &.theme-2nd .di-elite-badge { background: linear-gradient(to right, #cbd5e1, #64748b); }
+        &.theme-least .di-elite-badge { background: linear-gradient(to right, #f87171, #dc2626); }
+    }
+
+    // ── 4. Controls Layout ────────────────────────────────────────────────
+    .controls-grid {
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+        gap: 1.5rem;
+    }
+
+    .tunnels-wrap {
+        .mode-toggle { display: flex; background: #020617; padding: 0.25rem; border-radius: 0.75rem; margin-bottom: 1.5rem; border: 1px solid #1e293b;
+            button { flex: 1; padding: 0.75rem; font-size: 0.75rem; border: none; background: transparent; color: #64748b; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;
+                &.active { background: #4f46e5; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); } }
+        }
+        .target-input { margin-bottom: 1.5rem; label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; }
+            input { width: 100%; background: #020617; border: 1px solid #334155; border-radius: 0.75rem; padding: 0.75rem; text-align: center; color: #fff; font-size: 1.25rem; outline: none; &:focus{ border-color: #6366f1; } }
+        }
+        .slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem;
+            .slot-card { background: #020617; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 0.5rem; text-align: center; position: relative; overflow: hidden;
+                &:hover { background: rgba(99, 102, 241, 0.05); }
+                label { font-size: 0.55rem; color: #64748b; }
+                input { width: 100%; background: transparent; border: none; text-align: center; color: #fff; font-size: 1.5rem; outline: none; }
+                .strike-btn { margin-top: 0.5rem; width: 100%; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5); padding: 0.4rem; border-radius: 0.5rem; font-size: 0.6rem; cursor: pointer; &:hover{ background: #10b981; color:#fff; } }
+            }
+        }
+    }
+
+    .gates-wrap {
+        display: flex; flex-direction: column; gap: 0.5rem;
+        .gate-card { padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #1e293b; background: #020617; cursor: pointer; transition: all 0.2s;
+            &.active { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.5); box-shadow: 0 0 15px rgba(99, 102, 241, 0.1); .g-ind { background: #6366f1; border-color: #6366f1; } .g-name { color: #a5b4fc; } }
+            .g-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; .g-name { font-size: 0.75rem; color: #cbd5e1; } .g-ind { width: 1.25rem; height: 1.25rem; border: 2px solid #475569; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; } }
+            .g-desc { font-size: 0.65rem; color: #64748b; }
+        }
+    }
+
+    .strategy-wrap {
+        display: flex; flex-direction: column; justify-content: space-between; position: relative; gap: 1rem;
+        .str-row { display: flex; justify-content: space-between; align-items: center; background: #020617; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #1e293b;
+            label { font-size: 0.75rem; color: #94a3b8; }
+            input { width: 5rem; background: transparent; border: none; text-align: right; color: #fff; font-size: 1.25rem; outline: none; }
+        }
+        .m-toggle { width: 3.5rem; height: 1.75rem; border-radius: 99px; background: #334155; position: relative; cursor: pointer; transition: 0.3s;
+            .m-dot { position: absolute; top: 0.25rem; left: 0.25rem; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: #fff; transition: 0.3s; }
+            &.on { background: #6366f1; .m-dot { transform: translateX(1.75rem); } }
+        }
+        .activate-btn { width: 100%; padding: 1.25rem; border-radius: 1rem; font-size: 1.125rem; border: none; color: #fff; cursor: pointer; transition: all 0.2s;
+            background: linear-gradient(to right, #4f46e5, #9333ea); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            &:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.7); }
+            &.running { background: #dc2626; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); animation: pulse-red 2s infinite; }
+            .btn-spin { width: 1rem; height: 1rem; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin-slow 1s linear infinite; }
+        }
+    }
+
+    // ── 5. Ledger & Performance ───────────────────────────────────────────
+    .ledger-perf-card {
+        padding: 0; overflow: hidden; display: flex; flex-direction: column; width: 100%;
+        .lp-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: rgba(51,65,85,0.5); border-bottom: 1px solid #1e293b;
+            .lp-metric { background: #0f172a; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+                .lp-lbl { font-size: 0.65rem; color: #64748b; margin-bottom: 0.5rem; }
+                .lp-val { font-size: 1.25rem; color: #fff; }
+                &.wins .lp-lbl { color: rgba(16,185,129,0.5); } &.wins .lp-val { color: #34d399; }
+                &.losses .lp-lbl { color: rgba(239,68,68,0.5); } &.losses .lp-val { color: #f87171; }
+                &.hero { position: relative; overflow: hidden; grid-column: 1 / -1; min-height: 100px;
+                    @media (min-width: 1024px) { grid-column: span 1; min-height: auto; }
+                    .hero-bg { position: absolute; inset: 0; opacity: 0.1; }
+                    &.pos .hero-bg { background: #10b981; } &.pos .lp-lbl { color: #10b981; } &.pos .lp-val { color: #34d399; }
+                    &.neg .hero-bg { background: #ef4444; } &.neg .lp-lbl { color: #ef4444; } &.neg .lp-val { color: #f87171; }
+                    .lp-val { font-size: 2rem; z-index: 10; position: relative; }
+                    .lp-lbl { z-index: 10; position: relative; }
                 }
-
-                &:disabled {
-                    opacity: 0.35;
-                    cursor: not-allowed;
-                }
+            }
+        }
+        .lp-header { padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b;
+            .lp-title { font-size: 0.875rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.5rem; }
+            .purge-btn { padding: 0.5rem 1rem; background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 0.5rem; font-size: 0.7rem; cursor: pointer; &:hover { background: #334155; } }
+        }
+        .lp-table-wrap { overflow-x: auto; width: 100%;
+            table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;
+                th { padding: 0.75rem 1rem; font-size: 0.6rem; color: #64748b; background: rgba(255,255,255,0.02); border-bottom: 1px solid #1e293b; white-space: nowrap; }
+                td { padding: 0.75rem 1rem; font-size: 0.8rem; border-bottom: 1px solid rgba(51,65,85,0.3); white-space: nowrap; }
+                tr:hover { background: rgba(99,102,241,0.05); }
+                .t-id { color: #64748b; font-family: var(--font-mono); font-size: 0.7rem; }
+                .t-mkt { font-weight: 700; color: #cbd5e1; }
+                .t-typ { color: #94a3b8; font-size: 0.7rem; }
+                .t-tgt { font-size: 1rem; color: #facc15; }
+                .t-stk { font-weight: 700; color: #e2e8f0; }
+                .t-tim { color: #94a3b8; font-size: 0.7rem; }
+                .t-pts { font-family: var(--font-mono); color: #94a3b8; font-size: 0.7rem; }
+                .t-out { font-size: 0.7rem; &.won { color: #34d399; } &.lost { color: #f87171; } &.pending { color: #818cf8; animation: pulse 2s infinite; } }
+                .t-emp { padding: 2rem; text-align: center; color: #64748b; font-size: 0.8rem; font-style: italic; white-space: normal; }
             }
         }
     }
 
-    // ── Control Row ────────────────────────────────────────────────────────
-    .mkill-control-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.5rem;
-
-        label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #94a3b8;
-        }
-
-        input, select {
-            background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 6px;
-            color: #fff;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 0.35rem 0.5rem;
-            width: 80px;
-            text-align: center;
-            outline: none;
-
-            &:focus {
-                border-color: rgba(245, 158, 11, 0.5);
-            }
-        }
-    }
-
-    // ── Toggle Row ─────────────────────────────────────────────────────────
-    .mkill-toggle-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.45rem 0;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: background 0.15s;
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        span {
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            color: #94a3b8;
-            text-transform: uppercase;
-        }
-
-        .mkill-switch {
-            width: 32px;
-            height: 17px;
-            border-radius: 99px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            position: relative;
-            transition: background 0.2s;
-            flex-shrink: 0;
-
-            &::after {
-                content: '';
-                position: absolute;
-                top: 2px;
-                left: 2px;
-                width: 11px;
-                height: 11px;
-                border-radius: 50%;
-                background: #475569;
-                transition: all 0.2s;
-            }
-
-            &.on {
-                background: rgba(245, 158, 11, 0.3);
-                border-color: #f59e0b;
-
-                &::after {
-                    left: calc(100% - 13px);
-                    background: #f59e0b;
-                    box-shadow: 0 0 6px #f59e0b;
-                }
-            }
-        }
-    }
-
-    // ── Sub Config area ────────────────────────────────────────────────────
-    .mkill-sub-config {
-        padding: 0.4rem 0 0.2rem 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-left: 2px solid rgba(245, 158, 11, 0.2);
-        margin-left: 0.3rem;
-
-        select, input {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 5px;
-            color: #fff;
-            font-size: 0.7rem;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            padding: 0.25rem 0.4rem;
-            width: 55px;
-            outline: none;
-        }
-
-        span {
-            font-size: 0.65rem;
-            color: #475569;
-        }
-    }
-
-    // ── Tick Stream ────────────────────────────────────────────────────────
-    .mkill-tick-stream {
-        display: flex;
-        gap: 0.4rem;
-        flex-wrap: wrap;
-        margin-top: 0.5rem;
-
-        .mkill-tick-chip {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 900;
-            font-family: var(--font-mono);
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            color: #64748b;
-            transition: all 0.2s;
-
-            &.chip-latest {
-                border-color: rgba(245, 158, 11, 0.5);
-                background: rgba(245, 158, 11, 0.12);
-                color: #f59e0b;
-                box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
-            }
-
-            &.chip-most {
-                border-color: rgba(255, 215, 0, 0.5);
-                color: #FFD700;
-            }
-
-            &.chip-second {
-                border-color: rgba(192, 192, 192, 0.4);
-                color: #C0C0C0;
-            }
-
-            &.chip-least {
-                border-color: rgba(239, 68, 68, 0.4);
-                color: #ef4444;
-            }
-        }
-    }
-
-    // ── Execution Buttons ──────────────────────────────────────────────────
-    .mkill-exec-btns {
-        display: flex;
-        gap: 0.7rem;
-
-        .mkill-btn-primary {
-            flex: 1;
-            padding: 0.9rem;
-            border: none;
-            border-radius: 10px;
-            font-family: var(--font-display);
-            font-size: 0.75rem;
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            cursor: pointer;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #000;
-            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
-            transition: all 0.3s ease;
-
-            &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 24px rgba(245, 158, 11, 0.55);
-            }
-
-            &.active {
-                background: linear-gradient(135deg, #ef4444, #b91c1c);
-                color: #fff;
-                box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-            }
-        }
-
-        .mkill-btn-secondary {
-            padding: 0.9rem 1.2rem;
-            border: 1px solid rgba(245, 158, 11, 0.25);
-            border-radius: 10px;
-            font-family: var(--font-display);
-            font-size: 0.7rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            cursor: pointer;
-            background: rgba(245, 158, 11, 0.06);
-            color: #f59e0b;
-            transition: all 0.3s ease;
-
-            &:hover {
-                background: rgba(245, 158, 11, 0.12);
-                border-color: rgba(245, 158, 11, 0.5);
-            }
-
-            &:disabled {
-                opacity: 0.35;
-                cursor: not-allowed;
-            }
-        }
-    }
+    // ── Keyframes ─────────────────────────────────────────────────────────
+    @keyframes spin-slow { 100% { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 }
-

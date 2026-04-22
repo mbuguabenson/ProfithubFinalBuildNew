@@ -286,36 +286,54 @@ const SignalsTab = observer(() => {
     return (
         <div className='signals-tab'>
             <div className='signals-tab__header'>
-                <div className='header-left'>
-                    <div className='market-selector'>
-                        <select value={symbol} onChange={e => changeSymbol(e.target.value)} className='premium-select'>
+                <div className='scanner-left'>
+                    <div className='scanner-brand'>
+                        <div className='scanner-icon'>
+                            <Activity size={20} className='pulse-icon' />
+                        </div>
+                        <div className='scanner-info'>
+                            <span className='label'>MARKET SCANNER</span>
+                            <span className='status'>LIVE FEED</span>
+                        </div>
+                    </div>
+                    <div className='market-picker'>
+                        <select value={symbol} onChange={e => changeSymbol(e.target.value)} className='scanner-select'>
                             {availableSymbols.map((s: any) => (
                                 <option key={s.symbol} value={s.symbol}>
-                                    {s.display_name}
+                                    {s.display_name.replace('Index', '')}
                                 </option>
                             ))}
                         </select>
                     </div>
-                    <div className='stat-group'>
-                        <div className='stat-item'>
-                            <span className='stat-label'>PRICE</span>
-                            <span className='stat-value'>{currentPrice}</span>
+                </div>
+
+                <div className='scanner-center'>
+                    <div className='ticker-group'>
+                        <div className='ticker-item price'>
+                            <span className='ticker-label'>LIVE PRICE</span>
+                            <div className='ticker-value'>
+                                <span className='symbol'>$</span>
+                                {currentPrice}
+                            </div>
                         </div>
-                        <div className='stat-item'>
-                            <span className='stat-label'>LAST DIGIT</span>
-                            <span className='stat-value highlight'>{currentDigit}</span>
+                        <div className='ticker-divider' />
+                        <div className='ticker-item digit'>
+                            <span className='ticker-label'>LAST DIGIT</span>
+                            <div className='ticker-value glowing'>
+                                {currentDigit}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className='header-center'>
-                    <div className='ticks-drawer'>
-                        <div className='ticks-drawer__label'>TICKS HISTORY DEPTH</div>
-                        <div className='ticks-drawer__container'>
-                            {[25, 60, 120, 250, 500, 1000].map(t => (
+                <div className='scanner-right'>
+                    <div className='depth-selector'>
+                        <span className='depth-label'>HISTORY DEPTH</span>
+                        <div className='depth-pills'>
+                            {[60, 120, 250, 500, 1000].map(t => (
                                 <button 
                                     key={t} 
-                                    className={`tick-select ${analysis?.maxTicks === t ? 'active' : ''}`}
+                                    className={`depth-pill ${analysis?.maxTicks === t ? 'active' : ''}`}
                                     onClick={() => changeHistoryLength(t)}
                                 >
                                     {t}
@@ -323,19 +341,20 @@ const SignalsTab = observer(() => {
                             ))}
                         </div>
                     </div>
-                </div>
-
-                <div className='header-right'>
-                    <div className={`connection-status connection-status--${connectionStatus}`}>
-                        <div className='dot' />
-                        <span>{connectionStatus.toUpperCase()}</span>
+                    <div className='connection-status'>
+                        <div className={`status-dot ${connectionStatus === 'connected' ? 'online' : 'offline'}`} />
+                        <span className='status-text'>{connectionStatus === 'connected' ? 'STABLE' : 'OFFLINE'}</span>
                     </div>
-                    <button className='stop-btn' onClick={stopAll}>
-                        STOP ALL
-                    </button>
-                    <button className='icon-btn' onClick={() => setShowLogs(!showLogs)}>
-                        <Activity size={20} />
-                    </button>
+                    <div className='scanner-controls'>
+                        <button className='control-btn stop' onClick={stopAll}>
+                            <ShieldAlert size={14} />
+                            STOP
+                        </button>
+                        <button className='control-btn journal' onClick={() => setShowLogs(!showLogs)}>
+                            <BookOpen size={14} />
+                            JOURNAL
+                        </button>
+                    </div>
                 </div>
             </div>
 

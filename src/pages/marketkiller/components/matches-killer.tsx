@@ -5,41 +5,52 @@ import { runInAction } from 'mobx';
 import { useStore } from '@/hooks/useStore';
 import './matches-killer.scss';
 
-// ── Digit Intel Row ────────────────────────────────────────────────────────────
-const DigitIntelRow = ({ stat, power, isLatest, ranksMost, ranks2nd, ranksLeast }: any) => {
+// ── Shared Digit Card ──────────────────────────────────────────────────────────
+const DigitIntelCard = ({ stat, isLatest, ranksMost, ranks2nd, ranksLeast }: any) => {
     const isMost   = stat.digit === ranksMost;
     const is2nd    = stat.digit === ranks2nd;
     const isLeast  = stat.digit === ranksLeast;
     const isElite  = isMost || is2nd || isLeast;
 
-    const rankColor = isMost ? '#FFD700' : is2nd ? '#C0C0C0' : isLeast ? '#ef4444' : 'transparent';
-    const rankLabel = isMost ? 'MOST' : is2nd ? '2ND' : isLeast ? 'LEAST' : null;
-
-    const status = stat.percentage > 14 ? 'avoid' : stat.percentage > 11 ? 'warn' : 'clean';
-    const barWidth = Math.min(stat.percentage * 5, 100);
-    const barColor = stat.is_increasing ? '#10b981' : '#ef4444';
+    const themeClass = isMost ? 'theme-most' : is2nd ? 'theme-2nd' : isLeast ? 'theme-least' : 'theme-norm';
 
     return (
-        <div className={classNames('mkill-table-row', { 'is-latest': isLatest })}>
-            <div className='mkill-digit-cell' style={{ color: isElite ? rankColor : '#fff' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 900 }}>{stat.digit}</span>
-                {rankLabel && (
-                    <span
-                        className='mkill-rank-badge'
-                        style={{ background: `${rankColor}22`, color: rankColor, border: `1px solid ${rankColor}55` }}
-                    >
-                        {rankLabel}
-                    </span>
-                )}
+        <div className={classNames('digit-intel-modern', themeClass, { 
+            'is-latest': isLatest,
+            'glow-most': isMost,
+            'glow-least': isLeast 
+        })}>
+            {/* Background Glow */}
+            {isElite && <div className='card-glow-bg'></div>}
+
+            <div className='di-header'>
+                <div className='di-val font-black'>{stat.digit}</div>
+                <div className='di-rank-box'>
+                    <div className='di-r-label uppercase tracking-widest font-bold'>Rank</div>
+                    <div className='di-r-val font-black'>#{stat.rank}</div>
+                </div>
             </div>
-            <div style={{ color: '#64748b', fontSize: '0.7rem' }}>#{stat.rank}</div>
-            <div style={{ color: stat.is_increasing ? '#10b981' : '#ef4444', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700 }}>
-                {stat.is_increasing ? '▲' : '▼'} {stat.percentage.toFixed(1)}%
+
+            <div className='di-stats'>
+                <div className='di-s-row'>
+                    <span className='s-lbl font-bold'>Strength</span>
+                    <span className='s-pct font-black'>{stat.percentage.toFixed(1)}%</span>
+                </div>
+                
+                {/* Glowing Progress Bar */}
+                <div className='di-progress'>
+                    <div className='di-fill' style={{ width: `${Math.min(stat.percentage * 5, 100)}%` }} />
+                </div>
             </div>
-            <div><span className={`mkill-status-badge ${status}`}>{status}</span></div>
-            <div className='mkill-power-bar'>
-                <div className='mkill-power-fill' style={{ width: `${barWidth}%`, background: barColor }} />
-            </div>
+
+            {/* Spinner indicator if increasing */}
+            {stat.is_increasing && <div className='di-spinner'></div>}
+
+            {isElite && (
+                <div className='di-elite-badge uppercase tracking-widest font-black'>
+                    {isMost ? 'DOMINANT' : is2nd ? 'RUNNER UP' : 'VOLATILE'}
+                </div>
+            )}
         </div>
     );
 };
@@ -47,9 +58,24 @@ const DigitIntelRow = ({ stat, power, isLatest, ranksMost, ranks2nd, ranksLeast 
 // ── Main Component ─────────────────────────────────────────────────────────────
 const MatchesKiller = observer(() => {
     const { marketkiller } = useStore();
-    const { digit_stats, digit_power_scores, matches_settings, matches_ranks, ticks } = marketkiller;
+    const { 
+        symbol,
+        current_price,
+        last_digit,
+        digit_stats, 
+        matches_settings, 
+        matches_ranks, 
+        ticks, 
+        is_running,
+        session_pl,
+        wins,
+        losses,
+        total_stake_used,
+        total_runs,
+        trades_journal
+    } = marketkiller;
 
-    const last25 = useMemo(() => ticks.slice(-25).reverse(), [ticks]);
+    const last15 = useMemo(() => ticks.slice(-15).reverse(), [ticks]);
 
     const toggleCondition = (index: number) => {
         const next = [...matches_settings.enabled_conditions];
@@ -57,79 +83,93 @@ const MatchesKiller = observer(() => {
         runInAction(() => { marketkiller.matches_settings.enabled_conditions = next; });
     };
 
-    const verificationStage = useMemo(() => {
-        const enabled = matches_settings.enabled_conditions;
-        if (!enabled.some(Boolean)) return 0;
-        return enabled.filter(Boolean).length;
-    }, [matches_settings.enabled_conditions]);
-
     const conditions = [
-        { id: 1, key: 'C1: MANUAL RADAR',    desc: 'Trade manually locked predictions only' },
-        { id: 2, key: 'C2: MOMENTUM GATE',   desc: 'Power acceleration must be positive' },
-        { id: 3, key: 'C3: DOUBLE-HOLD',      desc: 'Confirm power increase two ticks in a row' },
-        { id: 4, key: 'C4: POWER COMPARE',   desc: null, hasConfig: 'c4' },
-        { id: 5, key: 'C5: TRIO-RANK SYNC',  desc: 'Auto-target Most, 2nd, and Least digits' },
-        { id: 6, key: 'C6: RANK SEQUENCE',   desc: null, hasConfig: 'c6' },
+        { id: 1, key: '1. TOP-3 RANKING', desc: 'Use Most, 2nd, and Least digits' },
+        { id: 2, key: '2. POWER ACCELERATION', desc: 'Prediction power must be increasing' },
+        { id: 3, key: '3. DUAL VELOCITY', desc: 'Increase simultaneously twice' },
+        { id: 4, key: '4. SEQUENTIAL STABILITY', desc: 'Last 5 digits must be Top-3' },
+        { id: 5, key: '5. PROBABILITY THRESHOLD', desc: 'Prediction power must be above N%' },
     ];
 
     return (
-        <div className='mkill-wrapper'>
-            {/* ── Header ──────────────────────────────────────────────────────── */}
-            <div className='mkill-header'>
-                <h2>Matches Killer</h2>
-                <div
-                    className={classNames('mkill-auto-toggle', { active: matches_settings.is_auto })}
-                    onClick={() => runInAction(() => { marketkiller.matches_settings.is_auto = !matches_settings.is_auto; })}
-                >
-                    <div className={classNames('mkill-dot', { on: matches_settings.is_auto })} />
-                    AUTO-TARGETS
-                </div>
-            </div>
+        <div className='mkill-modern-wrapper'>
+            <div className='max-w-7xl'>
 
-            {/* ── Entry Gate ──────────────────────────────────────────────────── */}
-            <div className='mkill-panel'>
-                <div className='mkill-panel__title'>Entry Gate — 6-Stage Verification</div>
-                <div className='mkill-gate'>
-                    <div className='mkill-gate-stages'>
-                        {[1, 2, 3, 4, 5, 6].map(s => (
-                            <div
-                                key={s}
-                                className={classNames('mkill-stage-dot', { active: matches_settings.enabled_conditions[s - 1] })}
-                            >
-                                {s}
+                {/* 1. Massive Digital Header Card */}
+                <div className='mkill-hero-card'>
+                    <div className='hero-glow-1'></div>
+                    <div className='hero-glow-2'></div>
+
+                    <div className='hero-content'>
+                        
+                        {/* Market & Price */}
+                        <div className='market-info'>
+                            <div className='market-label uppercase tracking-widest'>LIVE MARKET STREAM</div>
+                            <div className='market-name font-black'>{symbol.replace('_', ' ')}</div>
+                            <div className='price-label uppercase tracking-widest font-bold'>Current Price</div>
+                            <div className='price-val font-bold'>
+                                ${Number(current_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
+                        </div>
+
+                        {/* Last Digit Hero HUD */}
+                        <div className='hud-center'>
+                            <div className='hud-spin'></div>
+                            <span className='hud-label uppercase tracking-widest font-bold'>Last Digit</span>
+                            <span className='hud-val font-black'>{last_digit ?? '-'}</span>
+                        </div>
+
+                        {/* Top-Level Session Stats */}
+                        <div className='session-stats'>
+                            <div className='pl-box'>
+                                <div className='pl-label uppercase tracking-widest font-bold'>SESSION P/L</div>
+                                <div className={classNames('pl-val font-black', { pos: session_pl >= 0, neg: session_pl < 0 })}>
+                                    {session_pl >= 0 ? '+' : ''}${session_pl.toFixed(2)}
+                                </div>
+                            </div>
+                            <div className='wl-row font-black'>
+                                <div className='w-badge'>W: {wins}</div>
+                                <div className='l-badge'>L: {losses}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Last 15 Ticks Data Stream */}
+                <div className='mkill-section-card'>
+                    <div className='section-title uppercase tracking-widest font-bold'>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Sequential Data Stream
+                    </div>
+                    <div className='tick-stream-bubbles'>
+                        {last15.map((t, i) => (
+                            <div key={i} className={classNames('bubble', { 
+                                'is-latest': i === 0,
+                                'is-most': t === matches_ranks.most && i !== 0,
+                                'is-least': t === matches_ranks.least && i !== 0
+                            })}>
+                                {t}
                             </div>
                         ))}
-                    </div>
-                    <div className='mkill-gate-status'>
-                        {verificationStage === 0
-                            ? '⏸ All gates disabled — configure conditions below'
-                            : `⚡ ${verificationStage} of 6 gates active — monitoring market`}
+                        {last15.length === 0 && <span style={{ color: '#64748b', fontSize: '0.875rem', fontStyle: 'italic' }}>Awaiting market data synchronization...</span>}
                     </div>
                 </div>
-            </div>
 
-            {/* ── Main Split Layout ────────────────────────────────────────────── */}
-            <div className='mkill-split'>
-                {/* ── Left: Digit Intel Table ─────────────────────────────────── */}
-                <div className='mkill-panel'>
-                    <div className='mkill-panel__title'>Digit Intelligence Radar</div>
-                    <div className='mkill-intel-table'>
-                        <div className='mkill-table-head'>
-                            <span>Digit</span>
-                            <span>Rank</span>
-                            <span>Power</span>
-                            <span>Status</span>
-                            <span>Strength</span>
-                        </div>
+                {/* 3. Market Scanner Grid */}
+                <div className='mkill-section-card'>
+                    <div className='section-title uppercase tracking-widest font-bold'>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                        Market Scanner & Intelligence
+                    </div>
+                    <div className='scanner-grid'>
                         {digit_stats
                             .slice()
                             .sort((a, b) => a.rank - b.rank)
-                            .map((s, i) => (
-                                <DigitIntelRow
+                            .map((s) => (
+                                <DigitIntelCard
                                     key={s.digit}
                                     stat={s}
-                                    power={digit_power_scores[i]}
-                                    isLatest={s.digit === ticks[ticks.length - 1]}
+                                    isLatest={s.digit === last_digit}
                                     ranksMost={matches_ranks.most}
                                     ranks2nd={matches_ranks.second}
                                     ranksLeast={matches_ranks.least}
@@ -138,166 +178,262 @@ const MatchesKiller = observer(() => {
                     </div>
                 </div>
 
-                {/* ── Right: Controls ─────────────────────────────────────────── */}
-                <div className='mkill-controls'>
-                    {/* Prediction Tunnels */}
-                    <div className='mkill-panel'>
-                        <div className='mkill-panel__title'>Prediction Tunnels</div>
-                        <div className='mkill-prediction-slots'>
-                            {[0, 1, 2].map(idx => (
-                                <div key={idx} className='mkill-slot'>
-                                    <label>#{idx + 1}</label>
-                                    <input
-                                        type='number'
-                                        min='0' max='9'
-                                        disabled={matches_settings.is_auto}
-                                        value={matches_settings.predictions[idx] ?? 0}
-                                        onChange={e => {
-                                            const val = parseInt(e.target.value);
-                                            const next = [...matches_settings.predictions];
-                                            next[idx] = isNaN(val) ? 0 : val;
-                                            runInAction(() => { marketkiller.matches_settings.predictions = next; });
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                {/* 4. Controls Section: Tunnels, Gates, Strategy */}
+                <div className='controls-grid'>
+                    
+                    {/* Tunnels */}
+                    <div className='mkill-section-card tunnels-wrap'>
+                        <h3 className='section-title uppercase tracking-widest font-bold'>Prediction Tunnels</h3>
+                        
+                        <div className='mode-toggle'>
+                            <button 
+                                className={classNames('uppercase tracking-widest font-black', { active: !matches_settings.is_auto })}
+                                onClick={() => runInAction(() => { marketkiller.matches_settings.is_auto = false; })}
+                            >
+                                Manual Ops
+                            </button>
+                            <button 
+                                className={classNames('uppercase tracking-widest font-black', { active: matches_settings.is_auto })}
+                                onClick={() => runInAction(() => { marketkiller.matches_settings.is_auto = true; })}
+                            >
+                                Auto Discovery
+                            </button>
                         </div>
-                        <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.6rem', fontStyle: 'italic' }}>
-                            {matches_settings.is_auto ? '⚡ Automated Discovery Active' : '🎯 Manual Targeting Active'}
+
+                        <div className='target-input'>
+                            <label className='uppercase tracking-widest font-bold'>Active Targets (Max 10)</label>
+                            <input 
+                                type='number' min='1' max='10' className='font-black'
+                                value={matches_settings.simultaneous_trades}
+                                onChange={e => runInAction(() => { marketkiller.matches_settings.simultaneous_trades = parseInt(e.target.value); })}
+                            />
                         </div>
+
+                        <div className='slots-grid'>
+                            {Array.from({ length: matches_settings.simultaneous_trades || 1 }).map((_, idx) => {
+                                const sortedDigits = [...digit_stats].sort((a, b) => b.count - a.count).map(s => s.digit);
+                                const autoDigit = sortedDigits[idx] ?? 0;
+                                const displayValue = matches_settings.is_auto ? autoDigit : (matches_settings.predictions[idx] ?? 0);
+
+                                return (
+                                    <div key={idx} className='slot-card'>
+                                        <label className='uppercase tracking-widest font-bold'>Slot {idx + 1}</label>
+                                        <input
+                                            type='number' min='0' max='9' className='font-black'
+                                            disabled={matches_settings.is_auto}
+                                            value={displayValue}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value);
+                                                const next = [...matches_settings.predictions];
+                                                next[idx] = isNaN(val) ? 0 : val;
+                                                runInAction(() => { marketkiller.matches_settings.predictions = next; });
+                                            }}
+                                        />
+                                        {!matches_settings.is_auto && (
+                                            <button 
+                                                className='strike-btn uppercase tracking-widest font-black'
+                                                onClick={() => marketkiller.executeSingleManualTrade(matches_settings.predictions[idx])}
+                                            >
+                                                Strike
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Global Multi-Burst Strike Button for Manual Mode */}
+                        {!matches_settings.is_auto && (
+                            <button 
+                                onClick={() => marketkiller.executeOneShot()}
+                                style={{ 
+                                    width: '100%', marginTop: '1rem', padding: '0.75rem', borderRadius: '0.75rem', border: 'none', 
+                                    background: 'linear-gradient(to right, #10b981, #059669)', color: '#fff', cursor: 'pointer',
+                                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)', transition: 'all 0.2s'
+                                }}
+                                className='uppercase tracking-widest font-black hover:opacity-90'
+                            >
+                                STRIKE MULTI-BURST ({matches_settings.simultaneous_trades})
+                            </button>
+                        )}
                     </div>
 
-                    {/* Strategy Controls */}
-                    <div className='mkill-panel'>
-                        <div className='mkill-panel__title'>Strategy Controls</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            <div className='mkill-control-row'>
-                                <label>Stake ($)</label>
-                                <input
-                                    type='number' step='0.5'
+                    {/* Gates */}
+                    <div className='mkill-section-card gates-wrap'>
+                        <h3 className='section-title uppercase tracking-widest font-bold'>Auto-Entry Gates</h3>
+                        {conditions.map((cond, idx) => {
+                            const isActive = matches_settings.enabled_conditions[idx];
+                            return (
+                                <div 
+                                    key={cond.id} 
+                                    className={classNames('gate-card', { active: isActive })}
+                                    onClick={() => toggleCondition(idx)}
+                                >
+                                    <div className='g-top'>
+                                        <span className='g-name uppercase tracking-widest font-black'>{cond.key}</span>
+                                        <div className='g-ind'>
+                                            {isActive && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                        </div>
+                                    </div>
+                                    <p className='g-desc font-bold'>
+                                        {cond.desc}
+                                        {idx === 4 && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                <span style={{ color: '#94a3b8' }}>Target N%:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1" 
+                                                    max="100" 
+                                                    value={matches_settings.c4_val}
+                                                    onClick={(e) => e.stopPropagation()} // Prevent toggling the gate when editing input
+                                                    onChange={(e) => runInAction(() => { marketkiller.matches_settings.c4_val = Number(e.target.value); })}
+                                                    style={{ width: '4rem', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.25rem', borderRadius: '0.25rem', outline: 'none' }}
+                                                />
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Strategy & Execute */}
+                    <div className='mkill-section-card strategy-wrap'>
+                        <div>
+                            <h3 className='section-title uppercase tracking-widest font-bold'>Tactical Configuration</h3>
+                            
+                            <div className='str-row'>
+                                <label className='uppercase tracking-widest font-bold'>Stake ($)</label>
+                                <input 
+                                    type='number' step='0.1' min='0.35' className='font-black'
                                     value={matches_settings.stake}
                                     onChange={e => runInAction(() => { marketkiller.matches_settings.stake = parseFloat(e.target.value); })}
                                 />
                             </div>
-                            <div className='mkill-control-row'>
-                                <label>Simultaneous Trades</label>
-                                <input
-                                    type='number' min='1' max='3'
-                                    value={matches_settings.simultaneous_trades}
-                                    onChange={e => runInAction(() => { marketkiller.matches_settings.simultaneous_trades = parseInt(e.target.value); })}
+                            <div className='str-row'>
+                                <label className='uppercase tracking-widest font-bold'>Duration</label>
+                                <input 
+                                    type='number' min='1' max='10' className='font-black'
+                                    value={matches_settings.duration}
+                                    onChange={e => runInAction(() => { marketkiller.matches_settings.duration = parseInt(e.target.value); })}
                                 />
                             </div>
-                            <div
-                                className='mkill-toggle-row'
-                                onClick={() => runInAction(() => { marketkiller.matches_settings.martingale_enabled = !matches_settings.martingale_enabled; })}
-                            >
-                                <span>Use Martingale Recovery</span>
-                                <div className={classNames('mkill-switch', { on: matches_settings.martingale_enabled })} />
+                            <div className='str-row'>
+                                <label className='uppercase tracking-widest font-bold'>Martingale X</label>
+                                <input 
+                                    type='number' step='0.1' className='font-black'
+                                    value={matches_settings.martingale_multiplier}
+                                    onChange={e => runInAction(() => { marketkiller.matches_settings.martingale_multiplier = parseFloat(e.target.value); })}
+                                />
                             </div>
-                            {matches_settings.martingale_enabled && (
-                                <div className='mkill-control-row'>
-                                    <label>Multiplier (×)</label>
-                                    <input
-                                        type='number' step='0.1'
-                                        value={matches_settings.martingale_multiplier}
-                                        onChange={e => runInAction(() => { marketkiller.matches_settings.martingale_multiplier = parseFloat(e.target.value); })}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
-                    {/* Verification Gates */}
-                    <div className='mkill-panel'>
-                        <div className='mkill-panel__title'>Verification Gates</div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            {conditions.map((cond, idx) => (
-                                <div key={cond.id}>
-                                    <div className='mkill-toggle-row' onClick={() => toggleCondition(idx)}>
-                                        <span>{cond.key}</span>
-                                        <div className={classNames('mkill-switch', { on: matches_settings.enabled_conditions[idx] })} />
-                                    </div>
-                                    {/* C4 sub-config */}
-                                    {cond.hasConfig === 'c4' && matches_settings.enabled_conditions[idx] && (
-                                        <div className='mkill-sub-config'>
-                                            <select
-                                                value={matches_settings.c4_op}
-                                                onChange={e => runInAction(() => { marketkiller.matches_settings.c4_op = e.target.value; })}
-                                            >
-                                                <option value='>='>{'≥'}</option>
-                                                <option value='=='>{'='}</option>
-                                                <option value='<='>{'≤'}</option>
-                                                <option value='>'>{'>'}</option>
-                                                <option value='<'>{'<'}</option>
-                                            </select>
-                                            <input
-                                                type='number'
-                                                value={matches_settings.c4_val}
-                                                onChange={e => runInAction(() => { marketkiller.matches_settings.c4_val = parseInt(e.target.value); })}
-                                            />
-                                            <span>%</span>
-                                        </div>
-                                    )}
-                                    {/* C6 sub-config */}
-                                    {cond.hasConfig === 'c6' && matches_settings.enabled_conditions[idx] && (
-                                        <div className='mkill-sub-config'>
-                                            <input
-                                                type='number'
-                                                value={matches_settings.c6_count}
-                                                onChange={e => runInAction(() => { marketkiller.matches_settings.c6_count = parseInt(e.target.value); })}
-                                            />
-                                            <select
-                                                value={matches_settings.c6_target_rank}
-                                                onChange={e => runInAction(() => { marketkiller.matches_settings.c6_target_rank = e.target.value as any; })}
-                                            >
-                                                <option value='most'>Most</option>
-                                                <option value='2nd'>2nd</option>
-                                                <option value='least'>Least</option>
-                                            </select>
-                                            <span>ticks</span>
-                                        </div>
-                                    )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
+                                <span className='uppercase tracking-widest font-bold' style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Martingale Recovery</span>
+                                <div 
+                                    className={classNames('m-toggle', { on: matches_settings.martingale_enabled })}
+                                    onClick={() => runInAction(() => { marketkiller.matches_settings.martingale_enabled = !matches_settings.martingale_enabled; })}
+                                >
+                                    <div className='m-dot'></div>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* ── Live Tick Stream ─────────────────────────────────────────────── */}
-            <div className='mkill-panel'>
-                <div className='mkill-panel__title'>Live Entry Stream — Last 25 Ticks</div>
-                <div className='mkill-tick-stream'>
-                    {last25.map((t, i) => (
-                        <div
-                            key={i}
-                            className={classNames('mkill-tick-chip', {
-                                'chip-latest': i === 0,
-                                'chip-most':   t === matches_ranks.most   && i !== 0,
-                                'chip-second': t === matches_ranks.second && i !== 0,
-                                'chip-least':  t === matches_ranks.least  && i !== 0,
-                            })}
+                        <button 
+                            className={classNames('activate-btn uppercase tracking-widest font-black', { running: is_running })}
+                            onClick={() => marketkiller.toggleEngine()}
                         >
-                            {t}
-                        </div>
-                    ))}
+                            {is_running && <div className='btn-spin'></div>}
+                            {is_running ? 'SHUTDOWN ENGINE' : 'ACTIVATE AUTO-ENGINE'}
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* ── Execution ────────────────────────────────────────────────────── */}
-            <div className='mkill-panel'>
-                <div className='mkill-panel__title'>Execution</div>
-                <div className='mkill-exec-btns'>
-                    <button
-                        className={classNames('mkill-btn-primary', { active: matches_settings.is_running })}
-                        onClick={() => runInAction(() => { marketkiller.matches_settings.is_running = !matches_settings.is_running; })}
-                    >
-                        {matches_settings.is_running ? '⏹ STOP KILLER ENGINE' : '▶ ACTIVATE KILLER ENGINE'}
-                    </button>
-                    <button className='mkill-btn-secondary'>
-                        ONE-SHOT
-                    </button>
+                {/* 5. Modern Transaction Ledger & Stats Grid */}
+                <div className='mkill-section-card ledger-perf-card'>
+                    
+                    {/* Performance Top Bar */}
+                    <div className='lp-top'>
+                        <div className='lp-metric'>
+                            <span className='lp-lbl uppercase tracking-widest font-black'>Total Capital</span>
+                            <span className='lp-val font-black'>${total_stake_used.toFixed(2)}</span>
+                        </div>
+                        <div className='lp-metric'>
+                            <span className='lp-lbl uppercase tracking-widest font-black'>Engagements</span>
+                            <span className='lp-val font-black'>{total_runs}</span>
+                        </div>
+                        <div className='lp-metric wins'>
+                            <span className='lp-lbl uppercase tracking-widest font-black'>Successful Hits</span>
+                            <span className='lp-val font-black'>{wins}</span>
+                        </div>
+                        <div className='lp-metric losses'>
+                            <span className='lp-lbl uppercase tracking-widest font-black'>Misses</span>
+                            <span className='lp-val font-black'>{losses}</span>
+                        </div>
+                        <div className={classNames('lp-metric hero', { pos: session_pl >= 0, neg: session_pl < 0 })}>
+                            <div className='hero-bg'></div>
+                            <span className='lp-lbl uppercase tracking-widest font-black'>Net Profitability</span>
+                            <span className='lp-val font-black'>
+                                {session_pl >= 0 ? '+' : ''}${session_pl.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Ledger Header */}
+                    <div className='lp-header'>
+                        <h3 className='lp-title uppercase tracking-widest font-bold'>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Mission Ledger
+                        </h3>
+                        <button 
+                            className='purge-btn uppercase tracking-widest font-black'
+                            onClick={() => marketkiller.resetStats()}
+                        >
+                            Purge Logs
+                        </button>
+                    </div>
+
+                    {/* Ledger Table */}
+                    <div className='lp-table-wrap'>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th className='uppercase tracking-widest font-black'>Ref ID</th>
+                                    <th className='uppercase tracking-widest font-black'>Market</th>
+                                    <th className='uppercase tracking-widest font-black'>Type</th>
+                                    <th className='uppercase tracking-widest font-black'>Target</th>
+                                    <th className='uppercase tracking-widest font-black'>Stake</th>
+                                    <th className='uppercase tracking-widest font-black'>Time</th>
+                                    <th className='uppercase tracking-widest font-black'>Entry/Exit</th>
+                                    <th className='uppercase tracking-widest font-black'>Outcome</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {trades_journal.map(j => (
+                                    <tr key={j.id}>
+                                        <td className='t-id'>{j.id}</td>
+                                        <td className='t-mkt'>{j.market}</td>
+                                        <td className='t-typ'>{j.type}</td>
+                                        <td className='t-tgt font-black'>{j.prediction}</td>
+                                        <td className='t-stk'>${j.stake.toFixed(2)}</td>
+                                        <td className='t-tim'>{j.time}</td>
+                                        <td className='t-pts'>{j.entry || '---'} / {j.exit || '---'}</td>
+                                        <td className={classNames('t-out uppercase tracking-widest font-black', j.status.toLowerCase())}>
+                                            {j.status}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {trades_journal.length === 0 && (
+                                    <tr>
+                                        <td colSpan={8} className='t-emp'>
+                                            Systems nominal. Awaiting mission parameters.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
         </div>
     );
