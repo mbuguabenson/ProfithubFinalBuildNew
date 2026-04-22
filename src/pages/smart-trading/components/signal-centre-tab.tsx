@@ -230,6 +230,7 @@ const SignalCentreTab = observer(() => {
 
     const [useMultipleMatches, setUseMultipleMatches] = useState(false);
     const [matchPredictions, setMatchPredictions] = useState<number[]>([0]);
+    const [manualPrediction, setManualPrediction] = useState<number | null>(null);
 
 
     const subsRef = useRef<Map<string, () => void>>(new Map());
@@ -473,6 +474,12 @@ const SignalCentreTab = observer(() => {
 
         while (botRef.current) {
             let currentAnalysis = bestSignal;
+            
+            // Override with manual prediction if set
+            if (manualPrediction !== null && currentAnalysis) {
+                currentAnalysis = { ...currentAnalysis, prediction: manualPrediction };
+            }
+
             if (alternateMarket && consecutiveLosses >= alternateAfterLosses) {
                 addLog(`🔄 Recovery Mode: Switching to ${alternateMarketSymbol} (${alternateTradeType})`);
                 // Create a synthetic analysis for the alternate market
@@ -578,7 +585,7 @@ const SignalCentreTab = observer(() => {
     }, [isBotRunning, runBotLoop]);
 
     return (
-        <div className='signal-centre'>
+        <div className={classNames('signal-centre', tradeType.toLowerCase())}>
             <div className='sc-header'>
                 <div className='sc-header__title'>
                     <span className='sc-header__icon'>📡</span>
@@ -727,7 +734,26 @@ const SignalCentreTab = observer(() => {
                         <div className='sc-best-signal__validity'>{validity}s</div>
                     </div>
                     <div className='sc-suggestion-banner'>
-                        PRO SUGGESTION: {tradeType === 'OVERUNDER' ? `Use ${bestSignal.entry} ${Array.isArray(bestSignal.prediction) ? bestSignal.prediction.join(', ') : bestSignal.prediction}` : bestSignal.entry}
+                        <div className='sc-suggestion-banner__label'>PRO SUGGESTION:</div>
+                        <div className='sc-suggestion-banner__content'>
+                            {tradeType === 'OVERUNDER' ? (
+                                <div className='sc-manual-prediction-selector'>
+                                    <span className='sc-pred-type'>{bestSignal.entry}</span>
+                                    <div className='sc-digit-pills'>
+                                        {(Array.isArray(bestSignal.prediction) ? bestSignal.prediction : [bestSignal.prediction ?? 0]).map(d => (
+                                            <button 
+                                                key={d} 
+                                                className={classNames('sc-digit-pill', { active: manualPrediction === d })}
+                                                onClick={() => setManualPrediction(d === manualPrediction ? null : d)}
+                                            >
+                                                {d}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <small>(Click digit to lock manually)</small>
+                                </div>
+                            ) : bestSignal.entry}
+                        </div>
                     </div>
                 </div>
             )}
