@@ -1,4 +1,4 @@
-﻿@use '@/components/shared/styles/_mixins.scss' as *;
+@use '@/components/shared/styles/_mixins.scss' as *;
 @import '@/styles/mixins';
 
 .turbo-exec-bot-tab {
@@ -12,11 +12,11 @@
 
     .card {
         background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(rem(12px));
-        border: rem(1px) solid rgba(148, 163, 184, 0.1);
-        border-radius: rem(20px);
-        padding: rem(24px);
-        box-shadow: 0 rem(10px) rem(30px) rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(to-rem(12px));
+        border: to-rem(1px) solid rgba(148, 163, 184, 0.1);
+        border-radius: to-rem(20px);
+        padding: to-rem(24px);
+        box-shadow: 0 to-rem(10px) to-rem(30px) rgba(0, 0, 0, 0.3);
     }
 
     /* Status Header & States */
@@ -144,10 +144,10 @@
     /* Core Layout */
     .bot-layout-grid {
         display: grid;
-        grid-template_columns: 1fr rem(350px);
-        gap: rem(24px);
+        grid-template_columns: 1fr to-rem(350px);
+        gap: to-rem(24px);
 
-        @media (max-width: rem(1024px)) {
+        @media (max-width: to-rem(1024px)) {
             grid-template-columns: 1fr;
         }
     }
@@ -348,3 +348,4 @@
         transform: translate(0);
     }
 }
+

@@ -2,7 +2,7 @@
 @import '@/styles/mixins';
 
 .over-under-analysis {
-    padding: rem(24px);
+    padding: to-rem(24px);
     background: linear-gradient(135deg, #020617 0%, #061028 100%);
     min-height: 100vh;
     color: #fff;
@@ -10,8 +10,8 @@
     .premium-market-header {
         display: grid;
         grid-template-columns: 1.5fr 1fr 1fr;
-        gap: rem(15px);
-        margin-bottom: rem(25px);
+        gap: to-rem(15px);
+        margin-bottom: to-rem(25px);
 
         .market-select-glass,
         .price-display-glass,
@@ -19,26 +19,26 @@
             background: rgb(255 255 255 / 5%);
             backdrop-filter: blur(20px);
             border: 1px solid rgb(168 85 247 / 20%);
-            padding: rem(12.5px);
-            border-radius: rem(20px);
+            padding: to-rem(12.5px);
+            border-radius: to-rem(20px);
             display: flex;
             flex-direction: column;
-            gap: rem(5px);
-            box-shadow: 0 rem(10px) rem(40px) rgb(0 0 0 / 60%);
+            gap: to-rem(5px);
+            box-shadow: 0 to-rem(10px) to-rem(40px) rgb(0 0 0 / 60%);
 
             .lbl {
-                font-size: rem(7px);
+                font-size: to-rem(7px);
                 color: #a855f7;
                 font-weight: 800;
-                letter-spacing: rem(2px);
+                letter-spacing: to-rem(2px);
             }
 
             .val {
-                font-size: rem(16px);
+                font-size: to-rem(16px);
                 font-weight: 900;
                 font-family: 'JetBrains Mono', monospace;
                 color: #fff;
-                text-shadow: 0 0 rem(10px) rgb(168 85 247 / 30%);
+                text-shadow: 0 0 to-rem(10px) rgb(168 85 247 / 30%);
             }
 
             select {
@@ -63,16 +63,16 @@
             }
 
             .digit-box {
-                width: rem(50px);
-                height: rem(50px);
-                border-radius: rem(14px);
+                width: to-rem(50px);
+                height: to-rem(50px);
+                border-radius: to-rem(14px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: rem(22px);
+                font-size: to-rem(22px);
                 font-weight: 900;
                 background: #000;
-                margin-top: rem(5px);
+                margin-top: to-rem(5px);
                 position: relative;
 
                 &.under {
@@ -95,7 +95,7 @@
     }
 
     .tab-header {
-        margin: rem(40px) 0;
+        margin: to-rem(40px) 0;
 
         .tab-title {
             font-size: 2.2rem;
@@ -110,8 +110,8 @@
     .top-analysis-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: rem(40px);
-        margin-bottom: rem(64px);
+        gap: to-rem(40px);
+        margin-bottom: to-rem(64px);
 
         .analysis-card {
             background: rgb(255 255 255 / 3%);
@@ -132,22 +132,22 @@
             }
 
             .card-label {
-                font-size: rem(8px);
+                font-size: to-rem(8px);
                 font-weight: 900;
                 color: rgb(255 255 255 / 40%);
-                margin-bottom: rem(15px);
-                letter-spacing: rem(2px);
+                margin-bottom: to-rem(15px);
+                letter-spacing: to-rem(2px);
             }
 
             .percentage {
-                font-size: rem(50px);
+                font-size: to-rem(50px);
                 font-weight: 950;
-                margin-bottom: rem(10px);
+                margin-bottom: to-rem(10px);
                 line-height: 1;
             }
 
             .appeared-count {
-                font-size: rem(10px);
+                font-size: to-rem(10px);
                 font-weight: 800;
                 opacity: 0.5;
             }
@@ -191,15 +191,15 @@
     }
 
     .all-digits-section {
-        margin-bottom: rem(64px);
+        margin-bottom: to-rem(64px);
 
         .section-title {
-            font-size: rem(17.6px);
+            font-size: to-rem(17.6px);
             font-weight: 900;
             color: #a855f7;
-            margin-bottom: rem(32px);
+            margin-bottom: to-rem(32px);
             text-transform: uppercase;
-            letter-spacing: rem(2.5px);
+            letter-spacing: to-rem(2.5px);
         }
 
         .digits-grid {
@@ -221,31 +221,31 @@
                 position: relative;
 
                 .digit-number {
-                    font-size: rem(25px);
+                    font-size: to-rem(25px);
                     font-weight: 950;
                     line-height: 1;
-                    margin-bottom: rem(5px);
+                    margin-bottom: to-rem(5px);
                 }
 
                 .percent {
-                    font-size: rem(12px);
+                    font-size: to-rem(12px);
                     font-weight: 900;
                     color: #fff;
                 }
 
                 .gap-info {
-                    font-size: rem(8.5px);
+                    font-size: to-rem(8.5px);
                     color: rgb(255 255 255 / 30%);
                     font-weight: 800;
                 }
 
                 .type-badge {
-                    font-size: rem(6px);
+                    font-size: to-rem(6px);
                     font-weight: 900;
-                    padding: rem(5px) rem(12px);
-                    border-radius: rem(8px);
-                    margin-top: rem(10px);
-                    letter-spacing: rem(1px);
+                    padding: to-rem(5px) to-rem(12px);
+                    border-radius: to-rem(8px);
+                    margin-top: to-rem(10px);
+                    letter-spacing: to-rem(1px);
                 }
 
                 &.under {
@@ -299,10 +299,10 @@
 
     .visual-timeline {
         background: rgb(0 0 0 / 60%);
-        padding: rem(40px);
-        border-radius: rem(30px);
-        border: rem(2px) solid rgb(255 255 255 / 3%);
-        box-shadow: inset 0 0 rem(40px) rgb(0 0 0 / 90%);
+        padding: to-rem(40px);
+        border-radius: to-rem(30px);
+        border: to-rem(2px) solid rgb(255 255 255 / 3%);
+        box-shadow: inset 0 0 to-rem(40px) rgb(0 0 0 / 90%);
 
         .timeline-title {
             font-size: 0.9rem;
@@ -376,3 +376,4 @@
         transform: translateY(-4px);
     }
 }
+

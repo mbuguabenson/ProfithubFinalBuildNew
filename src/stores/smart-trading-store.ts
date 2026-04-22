@@ -146,6 +146,7 @@ export default class SmartTradingStore {
     @observable accessor consecutive_losses = 0;
     @observable accessor max_drawdown = 0;
     @observable accessor trade_history: TTradeHistory[] = [];
+    @observable accessor manual_trade_history: TTradeHistory[] = [];
     @observable accessor is_smart_auto24_running = false;
     @observable accessor smart_auto24_strategy: string = 'EVENODD';
 
@@ -302,6 +303,16 @@ export default class SmartTradingStore {
         recovery_chain: [] as string[],
         is_recovery_enabled: false,
         bulk_purchase_count: 1,
+    };
+
+    // Signal Centre Advanced Settings
+    @observable accessor signals_settings = {
+        bulk_count: 1,
+        use_compounding: false,
+        compounding_multiplier: 2.0,
+        use_alternate_market: false,
+        alternate_market: 'R_100',
+        alternate_after_losses: 3,
     };
 
     @observable accessor pro_tool_differs_settings = {
@@ -3246,58 +3257,117 @@ export default class SmartTradingStore {
         stake: number;
         barrier?: number;
     }) => {
-        if (!this.root_store.common.is_socket_opened || this.is_executing) return;
+        if (!this.root_store.common.is_socket_opened) return;
 
         if (!this.root_store.client.is_logged_in) {
             this.root_store.run_panel.showLoginDialog();
             return;
         }
 
-        this.is_executing = true;
-        this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_SENT);
-        globalObserver.emit('contract.status', { id: 'contract.purchase_sent' });
+        const executeSingle = async (current_stake: number) => {
+            this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_SENT);
+            globalObserver.emit('contract.status', { id: 'contract.purchase_sent' });
 
-        try {
-            if (!api_base.api) return;
+            try {
+                if (!api_base.api) return;
 
-            const proposal_request = {
-                proposal: 1,
-                amount: stake,
-                basis: 'stake',
-                contract_type,
-                currency: this.root_store.client.currency || 'USD',
-                duration: 1,
-                duration_unit: 't',
-                symbol,
-                barrier: contract_type.includes('DIGIT') ? 0 : undefined, // Default barrier for digit trades if needed
-            };
+                const proposal_request = {
+                    proposal: 1,
+                    amount: current_stake,
+                    basis: 'stake',
+                    contract_type,
+                    currency: this.root_store.client.currency || 'USD',
+                    duration: 1,
+                    duration_unit: 't',
+                    symbol,
+                    ...(barrier !== undefined ? { barrier: String(barrier) } : {}),
+                };
 
-            const response = await api_base.api.send(proposal_request);
-            if (response.error) {
-                globalObserver.emit('ui.log.error', response.error.message);
-                this.is_executing = false;
-                this.root_store.run_panel.setContractStage(contract_stages.NOT_RUNNING);
-                return;
+                const response = await api_base.api.send(proposal_request);
+                if (response.error) {
+                    globalObserver.emit('ui.log.error', response.error.message);
+                    return;
+                }
+
+                const buy_response = await api_base.api.send({
+                    buy: response.proposal.id,
+                    price: current_stake,
+                    subscribe: 1,
+                });
+
+                if (buy_response.error) {
+                    globalObserver.emit('ui.log.error', buy_response.error.message);
+                    return;
+                }
+
+                this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_RECEIVED);
+                globalObserver.emit('ui.log.success', `Trade executed: ${contract_type} on ${symbol}`);
+
+                const contract_id = buy_response.buy.contract_id;
+                const subscription = api_base.api.onMessage().subscribe((msg: any) => {
+                    if (
+                        msg.msg_type === 'proposal_open_contract' &&
+                        msg.proposal_open_contract.contract_id === contract_id
+                    ) {
+                        const contract = msg.proposal_open_contract;
+                        if (contract.is_sold) {
+                            runInAction(() => {
+                                const status = contract.status;
+                                const profit = parseFloat(contract.profit);
+                                const is_win = status === 'won';
+
+                                if (is_win) {
+                                    this.wins++;
+                                    this.consecutive_losses = 0;
+                                    if (this.signals_settings.use_compounding) {
+                                        this.speedbot_stake *= this.signals_settings.compounding_multiplier;
+                                    }
+                                } else {
+                                    this.losses++;
+                                    this.consecutive_losses++;
+                                    if (this.signals_settings.use_compounding) {
+                                        this.speedbot_stake = 0.5; // Reset or handle loss compounding
+                                    }
+
+                                    // Alternate market switching
+                                    if (
+                                        this.signals_settings.use_alternate_market &&
+                                        this.consecutive_losses >= this.signals_settings.alternate_after_losses
+                                    ) {
+                                        this.symbol = this.signals_settings.alternate_market;
+                                        this.addConsoleLog(`Switched to alternate market: ${this.symbol}`, 'warning');
+                                    }
+                                }
+
+                                this.session_pl += profit;
+                                this.manual_trade_history.unshift({
+                                    timestamp: Date.now(),
+                                    contractType: contract_type,
+                                    stake: current_stake,
+                                    result: is_win ? 'WON' : 'LOST',
+                                    profitLoss: profit,
+                                });
+
+                                if (this.manual_trade_history.length > 50) {
+                                    this.manual_trade_history.pop();
+                                }
+
+                                subscription.unsubscribe();
+                            });
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Manual trade error:', error);
             }
+        };
 
-            const buy_response = await api_base.api.send({
-                buy: response.proposal.id,
-                price: stake,
-            });
-
-            if (buy_response.error) {
-                globalObserver.emit('ui.log.error', buy_response.error.message);
-                this.is_executing = false;
-                this.root_store.run_panel.setContractStage(contract_stages.NOT_RUNNING);
-                return;
+        const count = this.signals_settings.bulk_count || 1;
+        for (let i = 0; i < count; i++) {
+            await executeSingle(stake);
+            if (i < count - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between bulk trades
             }
-
-            this.root_store.run_panel.setContractStage(contract_stages.PURCHASE_RECEIVED);
-            globalObserver.emit('ui.log.success', `Trade executed: ${contract_type} on ${symbol}`);
-        } catch (error) {
-            console.error('Manual trade error:', error);
-            this.is_executing = false;
-            this.root_store.run_panel.setContractStage(contract_stages.NOT_RUNNING);
         }
     };
 }

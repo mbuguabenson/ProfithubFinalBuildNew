@@ -2,7 +2,7 @@
 @import '@/styles/mixins';
 
 .even-odd-analysis {
-    padding: rem(24px);
+    padding: to-rem(24px);
     background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
     min-height: 100vh;
     color: #fff;
@@ -10,8 +10,8 @@
     .premium-market-header {
         display: grid;
         grid-template-columns: 1.5fr 1fr 1fr;
-        gap: rem(15px);
-        margin-bottom: rem(25px);
+        gap: to-rem(15px);
+        margin-bottom: to-rem(25px);
 
         .market-select-glass,
         .price-display-glass,
@@ -19,27 +19,27 @@
             background: rgb(255 255 255 / 5%);
             backdrop-filter: blur(15px);
             border: 1px solid rgb(0 198 255 / 20%);
-            padding: rem(12.5px);
-            border-radius: rem(20px);
+            padding: to-rem(12.5px);
+            border-radius: to-rem(20px);
             display: flex;
             flex-direction: column;
-            gap: rem(5px);
-            box-shadow: 0 rem(8px) rem(32px) rgb(0 0 0 / 40%);
+            gap: to-rem(5px);
+            box-shadow: 0 to-rem(8px) to-rem(32px) rgb(0 0 0 / 40%);
 
             .lbl {
-                font-size: rem(7px);
+                font-size: to-rem(7px);
                 color: #0ea5e9;
                 font-weight: 800;
-                letter-spacing: rem(1.5px);
+                letter-spacing: to-rem(1.5px);
                 opacity: 0.8;
             }
 
             .val {
-                font-size: rem(16px);
+                font-size: to-rem(16px);
                 font-weight: 900;
                 font-family: 'JetBrains Mono', monospace;
                 color: #fff;
-                text-shadow: 0 0 rem(10px) rgb(255 255 255 / 20%);
+                text-shadow: 0 0 to-rem(10px) rgb(255 255 255 / 20%);
             }
 
             select {
@@ -64,16 +64,16 @@
             }
 
             .digit-box {
-                width: rem(50px);
-                height: rem(50px);
-                border-radius: rem(14px);
+                width: to-rem(50px);
+                height: to-rem(50px);
+                border-radius: to-rem(14px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: rem(20px);
+                font-size: to-rem(20px);
                 font-weight: 900;
                 background: #000;
-                margin-top: rem(5px);
+                margin-top: to-rem(5px);
                 position: relative;
                 overflow: hidden;
 
@@ -110,23 +110,23 @@
     }
 
     .tab-header {
-        margin: rem(40px) 0;
+        margin: to-rem(40px) 0;
 
         .tab-title {
-            font-size: rem(35.2px);
+            font-size: to-rem(35.2px);
             font-weight: 900;
             background: linear-gradient(135deg, #fff 0%, #0ea5e9 100%);
             background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: rem(-1px);
+            letter-spacing: to-rem(-1px);
         }
     }
 
     .top-analysis-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: rem(40px);
-        margin-bottom: rem(64px);
+        gap: to-rem(40px);
+        margin-bottom: to-rem(64px);
 
         .analysis-card {
             background: rgb(255 255 255 / 3%);
@@ -138,22 +138,22 @@
             position: relative;
 
             .card-label {
-                font-size: rem(8px);
+                font-size: to-rem(8px);
                 font-weight: 800;
                 color: #94a3b8;
-                margin-bottom: rem(15px);
-                letter-spacing: rem(2px);
+                margin-bottom: to-rem(15px);
+                letter-spacing: to-rem(2px);
             }
 
             .percentage {
-                font-size: rem(45px);
+                font-size: to-rem(45px);
                 font-weight: 950;
-                margin-bottom: rem(10px);
+                margin-bottom: to-rem(10px);
                 line-height: 1;
             }
 
             .appeared-count {
-                font-size: rem(9px);
+                font-size: to-rem(9px);
                 font-weight: 700;
                 color: rgb(255 255 255 / 40%);
             }
@@ -196,15 +196,15 @@
     }
 
     .all-digits-section {
-        margin-bottom: rem(64px);
+        margin-bottom: to-rem(64px);
 
         .section-title {
-            font-size: rem(16px);
+            font-size: to-rem(16px);
             font-weight: 900;
             color: #0ea5e9;
-            margin-bottom: rem(32px);
+            margin-bottom: to-rem(32px);
             text-transform: uppercase;
-            letter-spacing: rem(2px);
+            letter-spacing: to-rem(2px);
         }
 
         .digits-grid {
@@ -290,18 +290,18 @@
 
     .visual-timeline {
         background: rgb(0 0 0 / 50%);
-        padding: rem(32px);
-        border-radius: rem(24px);
-        border: rem(1px) solid rgb(255 255 255 / 5%);
-        box-shadow: inset 0 0 rem(20px) rgb(0 0 0 / 80%);
+        padding: to-rem(32px);
+        border-radius: to-rem(24px);
+        border: to-rem(1px) solid rgb(255 255 255 / 5%);
+        box-shadow: inset 0 0 to-rem(20px) rgb(0 0 0 / 80%);
 
         .timeline-title {
-            font-size: rem(12.8px);
+            font-size: to-rem(12.8px);
             font-weight: 900;
             color: #0ea5e9;
-            margin-bottom: rem(32px);
+            margin-bottom: to-rem(32px);
             text-transform: uppercase;
-            letter-spacing: rem(2px);
+            letter-spacing: to-rem(2px);
         }
 
         .timeline-grid {
@@ -375,3 +375,4 @@
         box-shadow: 0 0 25px rgb(16 185 129 / 100%);
     }
 }
+

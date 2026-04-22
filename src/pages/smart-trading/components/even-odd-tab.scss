@@ -13,8 +13,8 @@
 
     .premium-market-header {
         display: flex;
-        gap: rem(15px);
-        margin-bottom: rem(20px);
+        gap: to-rem(15px);
+        margin-bottom: to-rem(20px);
         flex-wrap: wrap;
 
         & > div {
@@ -22,13 +22,13 @@
             min-width: 200px;
             background: rgb(22 33 50 / 70%);
             border: 1px solid rgb(255 255 255 / 10%);
-            border-radius: rem(16px);
-            padding: rem(12.5px) rem(15px);
-            backdrop-filter: blur(rem(12px));
+            border-radius: to-rem(16px);
+            padding: to-rem(12.5px) to-rem(15px);
+            backdrop-filter: blur(to-rem(12px));
             display: flex;
             flex-direction: column;
-            gap: rem(5px);
-            box-shadow: 0 rem(4px) rem(20px) rgb(0 0 0 / 20%);
+            gap: to-rem(5px);
+            box-shadow: 0 to-rem(4px) to-rem(20px) rgb(0 0 0 / 20%);
 
             .lbl {
                 font-size: 0.7rem;
@@ -67,17 +67,17 @@
             }
 
             .digit-box {
-                width: rem(35px);
-                height: rem(35px);
-                border-radius: rem(7.5px);
+                width: to-rem(35px);
+                height: to-rem(35px);
+                border-radius: to-rem(7.5px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: rem(15px);
+                font-size: to-rem(15px);
                 font-weight: 902;
                 margin: 0 auto;
                 background: rgb(255 255 255 / 5%);
-                border: rem(2px) solid rgb(255 255 255 / 10%);
+                border: to-rem(2px) solid rgb(255 255 255 / 10%);
                 transition: all 0.3s ease;
 
                 &.even {
@@ -463,8 +463,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: rem(20px);
-        border-radius: rem(20px);
+        padding: to-rem(20px);
+        border-radius: to-rem(20px);
         height: 100%; // ⚖️ Balanced height
         border: 1px solid rgb(255 255 255 / 10%);
         backdrop-filter: blur(20px);
@@ -889,3 +889,4 @@
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
+

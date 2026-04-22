@@ -75,7 +75,7 @@
  * @param $px - px value to be converted
  * @param $base - base font size
  */
-@function rem($px, $base: 10px) {
+@function to-rem($px, $base: 10px) {
     @return calc($px / $base) * 1rem;
 }
 
@@ -365,3 +365,4 @@ $min-desktop-width: 1280px;
         @content;
     }
 }
+

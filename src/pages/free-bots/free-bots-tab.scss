@@ -18,35 +18,35 @@
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 1rem;
-        padding: rem(32px) rem(24px);
+        padding: to-rem(32px) to-rem(24px);
         background: linear-gradient(135deg, #0f1117 0%, #13151f 100%);
         border-bottom: 1px solid rgb(255 255 255 / 5%);
         z-index: 10;
 
         &__left {
             h2 {
-                font-size: rem(25.6px);
+                font-size: to-rem(25.6px);
                 font-weight: 800;
                 font-family: var(--font-display);
                 background: linear-gradient(90deg, #818cf8, #34d399);
                 background-clip: text;
                 -webkit-text-fill-color: transparent;
-                margin: 0 0 rem(3.2px);
+                margin: 0 0 to-rem(3.2px);
             }
 
             p {
-                font-size: rem(14.4px);
+                font-size: to-rem(14.4px);
                 color: #64748b;
                 margin: 0;
             }
         }
 
         .stats-badge {
-            padding: rem(6px) rem(14px);
+            padding: to-rem(6px) to-rem(14px);
             background: rgb(99 102 241 / 10%);
             border: 1px solid rgb(99 102 241 / 30%);
-            border-radius: rem(20px);
-            font-size: rem(12.8px);
+            border-radius: to-rem(20px);
+            font-size: to-rem(12.8px);
             color: #818cf8;
             font-weight: 600;
         }
@@ -54,7 +54,7 @@
 
     // â”€â”€â”€ Tab Viewport â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     .tab-viewport {
-        padding: rem(32px) rem(24px);
+        padding: to-rem(32px) to-rem(24px);
     }
 
     // â”€â”€â”€ Library Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -109,7 +109,7 @@
         background: rgb(255 255 255 / 2%);
         backdrop-filter: blur(16px);
         border: 1px solid rgb(255 255 255 / 5%);
-        border-radius: rem(24px);
+        border-radius: to-rem(24px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -219,7 +219,7 @@
         }
 
         &__title {
-            font-size: rem(20px);
+            font-size: to-rem(20px);
             font-weight: 900;
             margin: 0 0 0.5rem;
             color: #f8fafc;
@@ -316,9 +316,9 @@
         z-index: 1000;
 
         .spinner {
-            width: rem(50px);
-            height: rem(50px);
-            border: rem(4px) solid rgb(129 140 248 / 20%);
+            width: to-rem(50px);
+            height: to-rem(50px);
+            border: to-rem(4px) solid rgb(129 140 248 / 20%);
             border-top-color: #818cf8;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -340,3 +340,4 @@
         }
     }
 }
+

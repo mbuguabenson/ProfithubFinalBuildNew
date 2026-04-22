@@ -223,7 +223,7 @@ export default class TicksService {
             this.messageSubscription = api_base.api.onMessage().subscribe(({ data }) => {
                 if (data.error) {
                     if (data.error.code !== 'AlreadySubscribed') {
-                        console.error('[TicksService] API error:', data.error);
+                        console.error('[TicksService] API error:', data.error.message || data.error);
                     }
                     return;
                 }

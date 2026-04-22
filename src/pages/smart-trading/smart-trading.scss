@@ -7,11 +7,11 @@
     padding: 2.4rem;
     padding-top: 4rem;
     background: radial-gradient(circle at top right, #1a1033, #0d0d1a);
-    min-height: calc(100vh - rem(80px));
+    min-height: calc(100vh - to-rem(80px));
     color: #fff;
     overflow-y: auto;
     width: 100%;
-    max-width: rem(1400px);
+    max-width: to-rem(1400px);
     margin: 0 auto;
     position: relative;
     z-index: 10;
@@ -52,13 +52,13 @@
 
     &__sub-tabs {
         display: flex;
-        gap: rem(12px);
-        padding: rem(10px);
+        gap: to-rem(12px);
+        padding: to-rem(10px);
         background: rgb(255 255 255 / 3%);
-        backdrop-filter: blur(rem(20px));
-        border-radius: rem(16px);
+        backdrop-filter: blur(to-rem(20px));
+        border-radius: to-rem(16px);
         border: 1px solid rgb(255 255 255 / 10%);
-        margin-bottom: rem(24px);
+        margin-bottom: to-rem(24px);
         overflow-x: auto;
         scrollbar-width: none;
         -ms-overflow-style: none;
@@ -69,16 +69,16 @@
 
         .sub-tab-btn {
             position: relative;
-            padding: rem(12px) rem(24px);
+            padding: to-rem(12px) to-rem(24px);
             background: transparent;
             border: none;
             color: rgb(255 255 255 / 50%);
-            font-size: rem(14px);
+            font-size: to-rem(14px);
             font-weight: 700;
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            border-radius: rem(12px);
+            border-radius: to-rem(12px);
 
             &:hover {
                 color: #fff;
@@ -92,14 +92,14 @@
 
                 .active-indicator {
                     position: absolute;
-                    bottom: rem(6px);
+                    bottom: to-rem(6px);
                     left: 50%;
                     transform: translateX(-50%);
-                    width: rem(20px);
-                    height: rem(3px);
+                    width: to-rem(20px);
+                    height: to-rem(3px);
                     background: #00c6ff;
-                    border-radius: rem(10px);
-                    box-shadow: 0 0 rem(10px) #00c6ff;
+                    border-radius: to-rem(10px);
+                    box-shadow: 0 0 to-rem(10px) #00c6ff;
                 }
             }
         }
@@ -107,27 +107,27 @@
 
     .settings-card {
         background: rgb(255 255 255 / 3%);
-        backdrop-filter: blur(rem(12px));
-        padding: rem(38.4px);
-        border-radius: rem(20px);
+        backdrop-filter: blur(to-rem(12px));
+        padding: to-rem(38.4px);
+        border-radius: to-rem(20px);
         border: 1px solid rgb(255 255 255 / 10%);
         display: flex;
-        gap: rem(32px);
+        gap: to-rem(32px);
         flex-wrap: wrap;
-        box-shadow: 0 rem(10px) rem(30px) rgb(0 0 0 / 20%);
+        box-shadow: 0 to-rem(10px) to-rem(30px) rgb(0 0 0 / 20%);
         align-items: flex-end;
 
         @media (width <= 768px) {
             flex-direction: column;
             align-items: stretch;
-            padding: rem(25.6px);
+            padding: to-rem(25.6px);
         }
     }
 
     &__analytics {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(30%, 1fr)); // Responsive grid
-        gap: rem(15px);
+        gap: to-rem(15px);
     }
 
     .analytics-card {
@@ -138,10 +138,10 @@
         height: 100%; // ⚖️ Balanced height
 
         @media (width <= 600px) {
-            padding: rem(12px);
+            padding: to-rem(12px);
         }
 
-        border-radius: rem(20px);
+        border-radius: to-rem(20px);
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
@@ -166,8 +166,8 @@
     }
 
     .dominance-indicator {
-        height: rem(100px);
-        border-radius: rem(12px);
+        height: to-rem(100px);
+        border-radius: to-rem(12px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -249,9 +249,9 @@
         }
 
         .dual-bar {
-            height: rem(10px);
+            height: to-rem(10px);
             background: rgb(0 0 0 / 40%);
-            border-radius: rem(5px);
+            border-radius: to-rem(5px);
             display: flex;
             overflow: hidden;
             border: 1px solid rgb(255 255 255 / 5%);
@@ -317,8 +317,8 @@
 
             .digit-circle {
                 position: relative;
-                width: rem(42px);
-                height: rem(42px);
+                width: to-rem(42px);
+                height: to-rem(42px);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -565,3 +565,4 @@
         box-shadow: 0 0 0 0 rgb(255 68 68 / 0%);
     }
 }
+

@@ -1,4 +1,4 @@
-﻿@use '@/components/shared/styles/_mixins.scss' as *;
+@use '@/components/shared/styles/_mixins.scss' as *;
 @import '@/styles/mixins';
 
 .vsense-turbo-tab {
@@ -13,11 +13,11 @@
 
     .card {
         background: rgba(22, 33, 50, 0.4);
-        backdrop-filter: blur(rem(12px));
-        border: rem(1px) solid rgba(255, 255, 255, 0.08);
-        border-radius: rem(20px);
-        padding: rem(24px);
-        box-shadow: 0 rem(8px) rem(32px) rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(to-rem(12px));
+        border: to-rem(1px) solid rgba(255, 255, 255, 0.08);
+        border-radius: to-rem(20px);
+        padding: to-rem(24px);
+        box-shadow: 0 to-rem(8px) to-rem(32px) rgba(0, 0, 0, 0.3);
     }
 
     /* Mission Header */
@@ -25,9 +25,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: rem(32px);
-        padding: rem(24px) rem(32px);
-        border-bottom: rem(2px) solid rgba(139, 92, 246, 0.2);
+        gap: to-rem(32px);
+        padding: to-rem(24px) to-rem(32px);
+        border-bottom: to-rem(2px) solid rgba(139, 92, 246, 0.2);
 
         .state-monitor {
             display: flex;
@@ -201,10 +201,10 @@
     /* Layout Grid */
     .main-layout-grid {
         display: grid;
-        grid-template-columns: 1fr rem(320px);
-        gap: rem(24px);
+        grid-template-columns: 1fr to-rem(320px);
+        gap: to-rem(24px);
 
-        @media (max-width: rem(1024px)) {
+        @media (max-width: to-rem(1024px)) {
             grid-template-columns: 1fr;
         }
     }
@@ -597,3 +597,4 @@
         filter: drop-shadow(0 0 2px currentColor);
     }
 }
+

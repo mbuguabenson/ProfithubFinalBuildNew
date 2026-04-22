@@ -360,9 +360,9 @@
     .visual-timeline {
         margin-top: 1.5rem;
         background: rgb(255 255 255 / 3%);
-        backdrop-filter: blur(rem(12px));
-        padding: rem(20px);
-        border-radius: rem(20px);
+        backdrop-filter: blur(to-rem(12px));
+        padding: to-rem(20px);
+        border-radius: to-rem(20px);
         height: 100%; // ⚖️ Balanced height
         border: 1px solid rgb(255 255 255 / 10%);
 
@@ -424,3 +424,4 @@
         opacity: 0.8;
     }
 }
+

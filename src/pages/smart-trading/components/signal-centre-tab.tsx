@@ -22,6 +22,7 @@ const CONTINUOUS_INDICES = [
 const TRADE_TYPES = [
     { id: 'EVENODD', label: 'Even / Odd', icon: '⚖️', color: '#6366f1' },
     { id: 'OVERUNDER', label: 'Over / Under', icon: '📊', color: '#f59e0b' },
+    { id: 'MATCHES', label: 'Matches', icon: '🎯', color: '#8b5cf6' },
     { id: 'RISEFALL', label: 'Rise / Fall', icon: '📈', color: '#10b981' },
     { id: 'DIFFERS', label: 'Differs', icon: '🎯', color: '#ec4899' },
 ];
@@ -42,12 +43,12 @@ interface MarketAnalysis {
     fallPct: number;
     differsBest: number; // safest digit to differ
     matchesBest: number; // hottest digit to match
-    deviation: number; // how far the dominant side is from 50 %
+    deviation: number; // how far the dominant side is from 50%
     confidence: number; // 0-100
     signal: string;
     entry: string;
     tradeType: string;
-    prediction: number | null;
+    prediction: number | number[] | null;
     score: number;
 }
 
@@ -90,7 +91,7 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
     let deviation = 0,
         signal = 'STANDBY',
         entry = '',
-        prediction: number | null = null,
+        prediction: number | number[] | null = null,
         score = 0;
 
     switch (tradeType) {
@@ -111,11 +112,14 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
             if (deviation >= 7) {
                 signal = dom === 'OVER' ? 'BUY OVER' : 'BUY UNDER';
                 entry = dom;
-                // barrier suggestion
-                prediction =
-                    dom === 'OVER'
-                        ? Math.min(...sorted.filter(([d]) => Number(d) >= 5).map(([d]) => Number(d)))
-                        : Math.max(...sorted.filter(([d]) => Number(d) < 5).map(([d]) => Number(d)));
+                
+                if (dom === 'OVER') {
+                    // Suggest barriers for Over: If Over 0 is > 55%
+                    prediction = overPct > 55 ? [0, 1, 2, 3] : 0;
+                } else {
+                    // Suggest barriers for Under: If Under 9 is > 55%
+                    prediction = underPct > 55 ? [9, 8, 7, 6] : 9;
+                }
             }
             break;
         }
@@ -133,13 +137,29 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
             const leastFreq = sorted[sorted.length - 1][1];
             const leastDigit = Number(sorted[sorted.length - 1][0]);
             const leastPct = (leastFreq / total) * 100;
-            deviation = 10 - leastPct; // how far below flat 10 %
+            deviation = 10 - leastPct;
             score = Math.min(deviation * 5, 100);
-            differsBest && null;
             if (score >= 40) {
                 signal = `DIFFER ${leastDigit}`;
                 entry = `Avoid digit ${leastDigit}`;
                 prediction = leastDigit;
+            }
+            break;
+        }
+        case 'MATCHES': {
+            const mostFreq = sorted[0][1];
+            const mostDigit = Number(sorted[0][0]);
+            const mostPct = (mostFreq / total) * 100;
+            deviation = mostPct - 10;
+            score = Math.min(deviation * 8, 100);
+            
+            // Multiple predictions for matches: top 3 hottest digits
+            const top3 = sorted.slice(0, 3).map(s => Number(s[0]));
+            
+            if (score >= 30) {
+                signal = `MATCH ${mostDigit}`;
+                entry = `Target digit ${mostDigit}`;
+                prediction = top3;
             }
             break;
         }
@@ -173,14 +193,7 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
 
 const SignalCentreTab = observer(() => {
     const { smart_trading, common } = useStore();
-    const {
-        active_symbols_data,
-        calculateProbabilities,
-        ticks: globalTicks,
-        last_digit,
-        current_price,
-        symbol: activeSymbol,
-    } = smart_trading;
+    const { is_socket_opened } = common;
 
     // ── Local state ──
     const [tradeType, setTradeType] = useState<string>('EVENODD');
@@ -193,7 +206,7 @@ const SignalCentreTab = observer(() => {
     const [validity, setValidity] = useState(0);
     const [hasFired, setHasFired] = useState(false);
 
-    // Bot panel
+    // Bot settings
     const [stake, setStake] = useState(1.0);
     const [tp, setTp] = useState(10);
     const [sl, setSl] = useState(10);
@@ -205,49 +218,46 @@ const SignalCentreTab = observer(() => {
     const [botWins, setBotWins] = useState(0);
     const [botLosses, setBotLosses] = useState(0);
     const [currentBotStake, setCurrentBotStake] = useState(1.0);
+    const [ticks, setTicks] = useState(1);
+    const [bulkTrades, setBulkTrades] = useState(1);
+    const [compoundStake, setCompoundStake] = useState(false);
+    const [alternateMarket, setAlternateMarket] = useState(false);
+    const [alternateAfterLosses, setAlternateAfterLosses] = useState(3);
+    const [alternateMarketSymbol, setAlternateMarketSymbol] = useState('R_10');
+    const [alternateTradeType, setAlternateTradeType] = useState('EVENODD');
+    const [consecutiveLosses, setConsecutiveLosses] = useState(0);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [activeDashboardTab, setActiveDashboardTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
 
-    // Internal refs
     const subsRef = useRef<Map<string, () => void>>(new Map());
     const scanRef = useRef(false);
     const validityRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const botRef = useRef(false);
     const botStakeRef = useRef(1.0);
 
-    const { is_socket_opened } = common;
+    const api_base_ref = useRef<any>(null);
+    useEffect(() => {
+        import('@/external/bot-skeleton').then(mod => {
+            api_base_ref.current = mod.api_base.api;
+        });
+    }, []);
 
-    /* ── utility: subscribe to one symbol ── */
     const subscribeSymbol = useCallback((sym: string): Promise<number[]> => {
         return new Promise(resolve => {
-            if (!api_base_ref.current) {
-                resolve([]);
-                return;
-            }
+            if (!api_base_ref.current) { resolve([]); return; }
             const acc: number[] = [];
-
+            const api = api_base_ref.current;
+            
             const doRequest = async () => {
                 try {
-                    const api = api_base_ref.current!;
-                    let resp: any;
-                    try {
-                        resp = await api.send({
-                            ticks_history: sym,
-                            count: 120,
-                            end: 'latest',
-                            style: 'ticks',
-                            subscribe: 1,
-                        });
-                    } catch (e: any) {
-                        if (e?.error?.code === 'AlreadySubscribed') {
-                            resp = await api.send({
-                                ticks_history: sym,
-                                count: 120,
-                                end: 'latest',
-                                style: 'ticks',
-                            });
-                        } else throw e;
-                    }
-
-                    // seed from history
+                    const resp = await api.send({
+                        ticks_history: sym,
+                        count: 120,
+                        end: 'latest',
+                        style: 'ticks',
+                        subscribe: 1,
+                    });
+                    
                     const hist = resp.history || resp.ticks_history;
                     if (hist?.prices) {
                         hist.prices.forEach((p: any) => {
@@ -258,8 +268,6 @@ const SignalCentreTab = observer(() => {
                     }
 
                     const streamId = resp.subscription?.id;
-
-                    // live sub
                     const sub = api.onMessage().subscribe((msg: any) => {
                         if (msg.msg_type === 'tick' && msg.tick?.symbol === sym) {
                             const s = String(msg.tick.quote);
@@ -277,46 +285,21 @@ const SignalCentreTab = observer(() => {
 
                     subsRef.current.set(sym, () => {
                         sub.unsubscribe();
-                        if (streamId && api) {
-                            try {
-                                api.send({ forget: streamId });
-                            } catch (_) {
-                                // ignore
-                            }
-                        }
+                        if (streamId) api.send({ forget: streamId }).catch(() => {});
                     });
 
                     resolve([...acc]);
-                } catch (err) {
-                    console.warn(`[SignalCentre] Failed to subscribe ${sym}`, err);
-                    resolve([]);
-                }
+                } catch (err) { resolve([]); }
             };
             doRequest();
         });
     }, []);
 
-    /* ── get api_base lazily ── */
-    const api_base_ref = useRef<any>(null);
-    useEffect(() => {
-        import('@/external/bot-skeleton').then(mod => {
-            api_base_ref.current = mod.api_base.api;
-        });
-    }, []);
-
-    /* ── Clear all subscriptions ── */
     const clearAllSubs = useCallback(() => {
-        subsRef.current.forEach(unsub => {
-            try {
-                unsub();
-            } catch (_) {
-                // ignore
-            }
-        });
+        subsRef.current.forEach(unsub => unsub());
         subsRef.current.clear();
     }, []);
 
-    /* ── Validity countdown ── */
     const startValidity = useCallback(() => {
         setValidity(SIGNAL_VALIDITY_SECONDS);
         if (validityRef.current) clearInterval(validityRef.current);
@@ -325,7 +308,6 @@ const SignalCentreTab = observer(() => {
                 if (v <= 1) {
                     clearInterval(validityRef.current!);
                     setBestSignal(null);
-                    setHasFired(false);
                     setScanPhase('STANDBY');
                     return 0;
                 }
@@ -334,7 +316,6 @@ const SignalCentreTab = observer(() => {
         }, 1000);
     }, []);
 
-    /* ── Run the scan ── */
     const runScan = useCallback(async () => {
         if (isScanning) return;
         clearAllSubs();
@@ -343,201 +324,88 @@ const SignalCentreTab = observer(() => {
         setBestSignal(null);
         setAnalyses([]);
         setScanPhase('SCANNING');
-        setValidity(0);
-        setHasFired(false);
-
+        
         const results: MarketAnalysis[] = [];
-
         for (let i = 0; i < CONTINUOUS_INDICES.length; i++) {
             if (!scanRef.current) break;
             const { symbol, label } = CONTINUOUS_INDICES[i];
             setScanningIndex(i);
-
             const digits = await subscribeSymbol(symbol);
             if (digits.length >= 20) {
                 const analysis = analyseMarket(symbol, label, digits, tradeType);
                 results.push(analysis);
-                setMarketData(prev => ({ ...prev, [symbol]: { ticks: digits, price: '' } }));
                 setAnalyses([...results]);
             }
-
-            // small delay between markets
             await new Promise(r => setTimeout(r, 600));
         }
 
-        setScanningIndex(-1);
-
-        // Find best
-        const found =
-            results.filter(r => r.signal !== 'STANDBY').sort((a, b) => b.confidence - a.confidence)[0] ?? null;
-
+        const found = results.filter(r => r.signal !== 'STANDBY').sort((a, b) => b.confidence - a.confidence)[0] || null;
         if (found) {
-            setScanPhase('SIGNAL_FOUND');
             setBestSignal(found);
+            setScanPhase('SIGNAL_FOUND');
             startValidity();
         } else {
             setScanPhase('NO_SIGNAL');
         }
-
         setIsScanning(false);
+        setScanningIndex(-1);
     }, [isScanning, tradeType, subscribeSymbol, clearAllSubs, startValidity]);
 
     const stopScan = useCallback(() => {
         scanRef.current = false;
         setIsScanning(false);
         setScanPhase('STANDBY');
-        setScanningIndex(-1);
         clearAllSubs();
     }, [clearAllSubs]);
 
-    /* ── Execute one bot trade ── */
-    const executeTrade = useCallback(
-        async (analysis: MarketAnalysis, stakeAmt: number) => {
-            if (!api_base_ref.current || !is_socket_opened) return null;
-            const api = api_base_ref.current;
-            const sym = analysis.symbol;
+    const executeTrade = useCallback(async (analysis: MarketAnalysis, stakeAmt: number) => {
+        if (!api_base_ref.current || !is_socket_opened) return null;
+        const api = api_base_ref.current;
+        let contractType = '';
+        let barrier: number | undefined;
 
-            let contractType = '';
-            let barrier: number | undefined;
-
-            switch (analysis.tradeType) {
-                case 'EVENODD':
-                    contractType = analysis.entry === 'EVEN' ? 'DIGITEVEN' : 'DIGITODD';
-                    break;
-                case 'OVERUNDER':
-                    contractType = analysis.entry === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER';
-                    barrier = analysis.prediction ?? 4;
-                    break;
-                case 'RISEFALL':
-                    contractType = analysis.entry === 'RISE' ? 'CALL' : 'PUT';
-                    break;
-                case 'DIFFERS':
-                    contractType = 'DIGITDIFF';
-                    barrier = analysis.prediction ?? 0;
-                    break;
-            }
-
-            try {
-                const currency = smart_trading.root_store?.client?.currency || 'USD';
-                const req: any = {
-                    proposal: 1,
-                    amount: stakeAmt,
-                    basis: 'stake',
-                    contract_type: contractType,
-                    currency,
-                    duration: 1,
-                    duration_unit: 't',
-                    symbol: sym,
-                };
-                if (barrier !== undefined) req.barrier = barrier;
-
-                const propResp = await api.send(req);
-                if (propResp.error) return null;
-                const propId = propResp.proposal?.id;
-                if (!propId) return null;
-
-                const buyResp = await api.send({ buy: propId, price: stakeAmt });
-                if (buyResp.error) return null;
-
-                return buyResp.buy?.contract_id ?? null;
-            } catch (e) {
-                console.error('[SignalCentre] Trade error', e);
-                return null;
-            }
-        },
-        [is_socket_opened, smart_trading]
-    );
-
-    /* ── Bot loop ── */
-    const runBotLoop = useCallback(async () => {
-        if (!bestSignal || !isBotRunning) return;
-        botRef.current = true;
-        botStakeRef.current = stake;
-
-        addLog(`🤖 Bot started | Stake: ${stake} | TP: ${tp} | SL: ${sl}`);
-
-        while (botRef.current) {
-            const currentAnalysis = bestSignal;
-            const currentStake = botStakeRef.current;
-
-            const contractId = await executeTrade(currentAnalysis, currentStake);
-            if (!contractId) {
-                addLog('⚠️ Trade failed – retrying in 2s');
-                await new Promise(r => setTimeout(r, 2000));
-                continue;
-            }
-
-            addLog(`📤 Trade placed | ${currentAnalysis.signal} | Stake: ${currentStake.toFixed(2)}`);
-
-            // Wait for result
-            const result = await waitForResult(contractId);
-            if (result === null) {
-                await new Promise(r => setTimeout(r, 1000));
-                continue;
-            }
-
-            if (result.status === 'won') {
-                const profit = result.profit;
-                setBotWins(w => w + 1);
-                setBotPL(pl => pl + profit);
-                botStakeRef.current = stake; // reset
-                addLog(`✅ WIN  +${profit.toFixed(2)}`);
-                if (botPL + profit >= tp) {
-                    addLog('🏁 Take Profit hit');
-                    botRef.current = false;
-                    break;
-                }
-            } else {
-                const loss = result.profit;
-                setBotLosses(l => l + 1);
-                setBotPL(pl => pl + loss);
-                if (martingale) {
-                    botStakeRef.current = Math.min(currentStake * martingaleMultiplier, 1000);
-                    addLog(`❌ LOSS ${loss.toFixed(2)} | Martingale → ${botStakeRef.current.toFixed(2)}`);
-                } else {
-                    addLog(`❌ LOSS ${loss.toFixed(2)}`);
-                }
-                if (Math.abs(botPL + loss) >= sl) {
-                    addLog('🛑 Stop Loss hit');
-                    botRef.current = false;
-                    break;
-                }
-            }
-
-            setCurrentBotStake(botStakeRef.current);
-            await new Promise(r => setTimeout(r, 800));
+        switch (analysis.tradeType) {
+            case 'EVENODD': contractType = analysis.entry === 'EVEN' ? 'DIGITEVEN' : 'DIGITODD'; break;
+            case 'OVERUNDER': 
+                contractType = analysis.entry === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER';
+                barrier = Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 4);
+                break;
+            case 'MATCHES':
+                contractType = 'DIGITMATCH';
+                barrier = Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0);
+                break;
+            case 'RISEFALL': contractType = analysis.entry === 'RISE' ? 'CALL' : 'PUT'; break;
+            case 'DIFFERS':
+                contractType = 'DIGITDIFF';
+                barrier = Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0);
+                break;
         }
 
-        setIsBotRunning(false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bestSignal, isBotRunning, stake, tp, sl, martingale, martingaleMultiplier, executeTrade, botPL]);
+        try {
+            const req: any = {
+                proposal: 1, amount: stakeAmt, basis: 'stake', contract_type: contractType,
+                currency: 'USD', duration: ticks, duration_unit: 't', symbol: analysis.symbol,
+            };
+            if (barrier !== undefined) req.barrier = barrier;
+            const resp = await api.send(req);
+            if (resp.error) return null;
+            const buy = await api.send({ buy: resp.proposal.id, price: stakeAmt });
+            return buy.buy?.contract_id || null;
+        } catch (e) { return null; }
+    }, [is_socket_opened, ticks]);
 
-    const waitForResult = (contractId: string | number): Promise<{ status: string; profit: number } | null> => {
+    const waitForResult = (id: string | number): Promise<{status: string, profit: number} | null> => {
         return new Promise(resolve => {
-            let timeout: ReturnType<typeof setTimeout>;
-            try {
-                const api = api_base_ref.current;
-                if (!api) {
-                    resolve(null);
-                    return;
+            const api = api_base_ref.current;
+            if (!api) { resolve(null); return; }
+            const sub = api.subscribe({ proposal_open_contract: 1, contract_id: id }, (msg: any) => {
+                const poc = msg.proposal_open_contract;
+                if (poc?.is_sold) {
+                    sub.unsubscribe();
+                    resolve({ status: poc.status, profit: parseFloat(poc.profit || '0') });
                 }
-
-                const sub = api.subscribe({ proposal_open_contract: 1, contract_id: contractId }, (resp: any) => {
-                    const poc = resp.proposal_open_contract;
-                    if (poc?.is_sold) {
-                        clearTimeout(timeout);
-                        sub?.unsubscribe?.();
-                        resolve({ status: poc.status, profit: parseFloat(poc.profit || '0') });
-                    }
-                });
-
-                timeout = setTimeout(() => {
-                    sub?.unsubscribe?.();
-                    resolve(null);
-                }, 15000);
-            } catch (e) {
-                resolve(null);
-            }
+            });
+            setTimeout(() => { sub.unsubscribe(); resolve(null); }, 20000);
         });
     };
 
@@ -546,26 +414,83 @@ const SignalCentreTab = observer(() => {
         setBotLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 50));
     };
 
+    const runBotLoop = useCallback(async () => {
+        if (!bestSignal || !isBotRunning) return;
+        botRef.current = true;
+        botStakeRef.current = stake;
+        setConsecutiveLosses(0);
+        addLog(`🤖 Bot Started | Strategy: ${tradeType} | Stake: ${stake}`);
+
+        while (botRef.current) {
+            let currentAnalysis = bestSignal;
+            if (alternateMarket && consecutiveLosses >= alternateAfterLosses) {
+                addLog(`🔄 Alternate Switch: ${alternateMarketSymbol} | ${alternateTradeType}`);
+                currentAnalysis = { ...bestSignal, symbol: alternateMarketSymbol, tradeType: alternateTradeType };
+            }
+
+            const currentStake = botStakeRef.current;
+            const tradePromises = Array.from({ length: bulkTrades }).map(() => executeTrade(currentAnalysis, currentStake));
+            const ids = (await Promise.all(tradePromises)).filter(id => id !== null);
+
+            if (ids.length === 0) {
+                addLog('⚠️ Execution failed - retrying...');
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+            }
+
+            addLog(`📤 ${ids.length} Trade(s) placed on ${currentAnalysis.symbol}`);
+            const results = await Promise.all(ids.map(id => waitForResult(id!)));
+            
+            let p = 0, w = 0, l = 0;
+            results.forEach(res => {
+                if (!res) return;
+                p += res.profit;
+                if (res.status === 'won') w++; else l++;
+                setTransactions(prev => [{
+                    id: Math.random().toString(36).substr(2, 9),
+                    time: new Date().toLocaleTimeString(),
+                    symbol: currentAnalysis.symbol,
+                    type: currentAnalysis.tradeType,
+                    stake: currentStake,
+                    profit: res.profit,
+                    status: res.status
+                }, ...prev].slice(0, 50));
+            });
+
+            setBotWins(prev => prev + w);
+            setBotLosses(prev => prev + l);
+            setBotPL(prev => prev + p);
+
+            if (p > 0) {
+                setConsecutiveLosses(0);
+                addLog(`✅ Wins: ${w}, Losses: ${l} | Net: +${p.toFixed(2)}`);
+                if (compoundStake) {
+                    botStakeRef.current = parseFloat((botStakeRef.current + p).toFixed(2));
+                    addLog(`📈 Compounding → Stake: ${botStakeRef.current}`);
+                } else botStakeRef.current = stake;
+                if (botPL + p >= tp) { addLog('🏆 Take Profit hit'); break; }
+            } else {
+                setConsecutiveLosses(cl => cl + 1);
+                addLog(`❌ Wins: ${w}, Losses: ${l} | Net: ${p.toFixed(2)}`);
+                if (martingale) {
+                    botStakeRef.current = Math.min(currentStake * martingaleMultiplier, 500);
+                    addLog(`📉 Martingale → Stake: ${botStakeRef.current.toFixed(2)}`);
+                } else botStakeRef.current = stake;
+                if (Math.abs(botPL + p) >= sl) { addLog('🛑 Stop Loss hit'); break; }
+            }
+            setCurrentBotStake(botStakeRef.current);
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        setIsBotRunning(false);
+        botRef.current = false;
+    }, [bestSignal, isBotRunning, stake, tp, sl, martingale, martingaleMultiplier, bulkTrades, compoundStake, alternateMarket, alternateAfterLosses, alternateMarketSymbol, alternateTradeType, consecutiveLosses, botPL, executeTrade, tradeType]);
+
     useEffect(() => {
-        if (isBotRunning && bestSignal) runBotLoop();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isBotRunning]);
+        if (isBotRunning) runBotLoop();
+    }, [isBotRunning, runBotLoop]);
 
-    /* ─── global probs from current symbol ─── */
-    const probs = calculateProbabilities();
-
-    /* ── Cleanup ── */
-    useEffect(() => {
-        return () => {
-            clearAllSubs();
-            if (validityRef.current) clearInterval(validityRef.current);
-        };
-    }, [clearAllSubs]);
-
-    /* ─────────────────────── RENDER ─────────────────────── */
     return (
         <div className='signal-centre'>
-            {/* ══ HEADER ══ */}
             <div className='sc-header'>
                 <div className='sc-header__title'>
                     <span className='sc-header__icon'>📡</span>
@@ -580,22 +505,15 @@ const SignalCentreTab = observer(() => {
                 </div>
             </div>
 
-            {/* ══ TRADE TYPE SELECTOR ══ */}
             <div className='sc-trade-type'>
-                <div className='sc-trade-type__label'>Preferred Trade Type</div>
+                <div className='sc-trade-type__label'>Preferred Strategy</div>
                 <div className='sc-trade-type__buttons'>
                     {TRADE_TYPES.map(t => (
                         <button
                             key={t.id}
-                            id={`sc-type-${t.id.toLowerCase()}`}
                             className={classNames('sc-type-btn', { active: tradeType === t.id })}
-                            style={{ '--accent': t.color } as React.CSSProperties}
-                            onClick={() => {
-                                setTradeType(t.id);
-                                setBestSignal(null);
-                                setAnalyses([]);
-                                setScanPhase('STANDBY');
-                            }}
+                            style={{ '--accent': t.color } as any}
+                            onClick={() => { setTradeType(t.id); setBestSignal(null); setAnalyses([]); setScanPhase('STANDBY'); }}
                             disabled={isScanning}
                         >
                             <span className='sc-type-btn__icon'>{t.icon}</span>
@@ -605,123 +523,52 @@ const SignalCentreTab = observer(() => {
                 </div>
             </div>
 
-            {/* ══ SCAN CONTROLS ══ */}
             <div className='sc-scan-controls'>
                 <div className='sc-scan-phase'>
-                    <div
-                        className={classNames('sc-phase-badge', {
-                            scanning: scanPhase === 'SCANNING',
-                            found: scanPhase === 'SIGNAL_FOUND',
-                            none: scanPhase === 'NO_SIGNAL',
-                            standby: scanPhase === 'STANDBY',
-                        })}
-                    >
-                        {scanPhase === 'STANDBY' && (
-                            <>
-                                <span className='sc-phase-dot' />
-                                ANALYSIS STANDBY
-                            </>
-                        )}
-                        {scanPhase === 'SCANNING' && (
-                            <>
-                                <span className='sc-phase-dot pulse' />
-                                SCANNING MARKETS…
-                            </>
-                        )}
-                        {scanPhase === 'SIGNAL_FOUND' && (
-                            <>
-                                <span className='sc-phase-dot blink' />
-                                SIGNAL FOUND
-                            </>
-                        )}
-                        {scanPhase === 'NO_SIGNAL' && (
-                            <>
-                                <span className='sc-phase-dot' />
-                                NO QUALIFYING SIGNAL
-                            </>
-                        )}
+                    <div className={classNames('sc-phase-badge', scanPhase.toLowerCase())}>
+                        <span className='sc-phase-dot' />
+                        {scanPhase.replace('_', ' ')}
                     </div>
-                    <div className='sc-scan-info'>Markets scanned: All Continuous Indices (120 ticks each)</div>
                 </div>
                 <div className='sc-scan-btns'>
                     {!isScanning ? (
-                        <button
-                            id='sc-btn-start-scan'
-                            className='sc-btn sc-btn--scan'
-                            onClick={runScan}
-                            disabled={!is_socket_opened}
-                        >
-                            <span className='sc-btn__icon'>🔍</span> Scan &amp; Execute
+                        <button className='sc-btn sc-btn--scan' onClick={runScan} disabled={!is_socket_opened}>
+                            🔍 Start Scanning
                         </button>
                     ) : (
-                        <button id='sc-btn-stop-scan' className='sc-btn sc-btn--stop' onClick={stopScan}>
-                            <span className='sc-btn__icon'>⛔</span> Stop Scan
+                        <button className='sc-btn sc-btn--stop' onClick={stopScan}>
+                            ⛔ Stop Scan
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* ══ MARKET SCAN GRID ══ */}
             {(isScanning || analyses.length > 0) && (
                 <div className='sc-market-grid'>
                     {CONTINUOUS_INDICES.map((m, idx) => {
                         const analysis = analyses.find(a => a.symbol === m.symbol);
                         const isActive = scanningIndex === idx;
-                        const isComplete = !!analysis;
-                        const hasSignal = isComplete && analysis.signal !== 'STANDBY';
-
                         return (
-                            <div
-                                key={m.symbol}
-                                className={classNames('sc-market-card', {
-                                    'sc-market-card--scanning': isActive,
-                                    'sc-market-card--complete': isComplete,
-                                    'sc-market-card--signal': hasSignal,
-                                })}
-                            >
+                            <div key={m.symbol} className={classNames('sc-market-card', { active: isActive, complete: !!analysis })}>
                                 <div className='sc-market-card__header'>
-                                    <span className='sc-market-card__name'>{m.label}</span>
-                                    <span className='sc-market-card__sym'>{m.symbol}</span>
+                                    <span>{m.label}</span>
                                 </div>
-                                {isActive && !isComplete && (
-                                    <div className='sc-market-card__loader'>
-                                        <div className='sc-loader-bar'>
-                                            <div className='sc-loader-bar__fill' />
+                                {analysis ? (
+                                    <div className='sc-market-stats'>
+                                        <div className='sc-stat-row'>
+                                            <span>Confidence</span>
+                                            <span>{analysis.confidence.toFixed(1)}%</span>
                                         </div>
-                                        <span>Fetching 120 ticks…</span>
-                                    </div>
-                                )}
-                                {isComplete && analysis && (
-                                    <div className='sc-market-card__result'>
-                                        <div className='sc-market-mini-stats'>
-                                            <span>E:{analysis.evenPct.toFixed(0)}%</span>
-                                            <span>O:{analysis.oddPct.toFixed(0)}%</span>
-                                            <span>↑:{analysis.overPct.toFixed(0)}%</span>
-                                            <span>↓:{analysis.underPct.toFixed(0)}%</span>
+                                        <div className='sc-stat-row'>
+                                            <span>Signal</span>
+                                            <span className='sc-signal-badge'>{analysis.signal}</span>
                                         </div>
-                                        <div
-                                            className={classNames('sc-market-signal', {
-                                                found: hasSignal,
-                                            })}
-                                        >
-                                            {hasSignal ? analysis.signal : 'STANDBY'}
+                                        <div className='sc-mini-progress'>
+                                            <div className='sc-mini-progress__fill' style={{ width: `${analysis.confidence}%` }} />
                                         </div>
-                                        {hasSignal && (
-                                            <div className='sc-confidence-bar'>
-                                                <div
-                                                    className='sc-confidence-bar__fill'
-                                                    style={{ width: `${analysis.confidence}%` }}
-                                                />
-                                                <span>{analysis.confidence.toFixed(0)}%</span>
-                                            </div>
-                                        )}
                                     </div>
-                                )}
-                                {!isActive && !isComplete && (
-                                    <div className='sc-market-card__pending'>
-                                        <span className='sc-pending-dot' />
-                                        Queued
-                                    </div>
+                                ) : (
+                                    <div className='sc-market-loading'>{isActive ? 'Scanning...' : 'Pending'}</div>
                                 )}
                             </div>
                         );
@@ -729,299 +576,94 @@ const SignalCentreTab = observer(() => {
                 </div>
             )}
 
-            {/* ══ BEST SIGNAL PANEL ══ */}
-            {bestSignal && scanPhase === 'SIGNAL_FOUND' && (
+            {bestSignal && (
                 <div className='sc-best-signal'>
                     <div className='sc-best-signal__header'>
-                        <div className='sc-best-signal__badge'>🎯 SIGNAL FOUND</div>
-                        <div className='sc-validity'>
-                            <span className='sc-validity__label'>Valid for</span>
-                            <span className={classNames('sc-validity__count', { urgent: validity <= 15 })}>
-                                {validity}s
-                            </span>
+                        <span className='sc-best-signal__icon'>🚀</span>
+                        <div>
+                            <h2>{bestSignal.label}</h2>
+                            <p>Suggested: <strong>{bestSignal.signal}</strong></p>
                         </div>
+                        <div className='sc-best-signal__validity'>{validity}s</div>
                     </div>
-
-                    <div className='sc-best-signal__body'>
-                        <div className='sc-signal-row'>
-                            <div className='sc-sig-item'>
-                                <div className='sc-sig-item__label'>MARKET</div>
-                                <div className='sc-sig-item__val'>{bestSignal.label}</div>
-                                <div className='sc-sig-item__sub'>{bestSignal.symbol}</div>
-                            </div>
-                            <div className='sc-sig-item'>
-                                <div className='sc-sig-item__label'>TRADE TYPE</div>
-                                <div className='sc-sig-item__val sc-sig-item__val--trade'>{bestSignal.signal}</div>
-                            </div>
-                            <div className='sc-sig-item'>
-                                <div className='sc-sig-item__label'>ENTRY</div>
-                                <div className='sc-sig-item__val sc-sig-item__val--entry'>
-                                    {bestSignal.entry || '—'}
-                                </div>
-                                {bestSignal.prediction !== null && (
-                                    <div className='sc-sig-item__sub'>Barrier / Digit: {bestSignal.prediction}</div>
-                                )}
-                            </div>
-                            <div className='sc-sig-item'>
-                                <div className='sc-sig-item__label'>CONFIDENCE</div>
-                                <div
-                                    className={classNames('sc-sig-item__val sc-sig-item__val--conf', {
-                                        high: bestSignal.confidence >= 70,
-                                        medium: bestSignal.confidence >= 45,
-                                        low: bestSignal.confidence < 45,
-                                    })}
-                                >
-                                    {bestSignal.confidence.toFixed(1)}%
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Prediction cards */}
-                        <div className='sc-pred-grid'>
-                            <div className='sc-pred-card sc-pred-card--eo'>
-                                <div className='sc-pred-card__title'>Even / Odd</div>
-                                <div className='sc-pred-card__row'>
-                                    <span>EVEN</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--even'
-                                            style={{ width: `${bestSignal.evenPct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.evenPct.toFixed(1)}%</span>
-                                </div>
-                                <div className='sc-pred-card__row'>
-                                    <span>ODD</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--odd'
-                                            style={{ width: `${bestSignal.oddPct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.oddPct.toFixed(1)}%</span>
-                                </div>
-                            </div>
-
-                            <div className='sc-pred-card sc-pred-card--ou'>
-                                <div className='sc-pred-card__title'>Over / Under</div>
-                                <div className='sc-pred-card__row'>
-                                    <span>OVER</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--over'
-                                            style={{ width: `${bestSignal.overPct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.overPct.toFixed(1)}%</span>
-                                </div>
-                                <div className='sc-pred-card__row'>
-                                    <span>UNDER</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--under'
-                                            style={{ width: `${bestSignal.underPct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.underPct.toFixed(1)}%</span>
-                                </div>
-                            </div>
-
-                            <div className='sc-pred-card sc-pred-card--dm'>
-                                <div className='sc-pred-card__title'>Differs / Matches</div>
-                                <div className='sc-pred-dm-row'>
-                                    <div className='sc-pred-dm-item'>
-                                        <div className='sc-pred-dm-item__label'>Best DIFFER</div>
-                                        <div className='sc-pred-dm-item__digit sc-pred-dm-item__digit--safe'>
-                                            {bestSignal.differsBest}
-                                        </div>
-                                        <div className='sc-pred-dm-item__sub'>Least frequent</div>
-                                    </div>
-                                    <div className='sc-pred-dm-item'>
-                                        <div className='sc-pred-dm-item__label'>Best MATCH</div>
-                                        <div className='sc-pred-dm-item__digit sc-pred-dm-item__digit--hot'>
-                                            {bestSignal.matchesBest}
-                                        </div>
-                                        <div className='sc-pred-dm-item__sub'>Hottest digit</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className='sc-pred-card sc-pred-card--rf'>
-                                <div className='sc-pred-card__title'>Rise / Fall</div>
-                                <div className='sc-pred-card__row'>
-                                    <span>RISE</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--rise'
-                                            style={{ width: `${bestSignal.risePct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.risePct.toFixed(1)}%</span>
-                                </div>
-                                <div className='sc-pred-card__row'>
-                                    <span>FALL</span>
-                                    <div className='sc-pred-bar'>
-                                        <div
-                                            className='sc-pred-bar__fill sc-pred-bar__fill--fall'
-                                            style={{ width: `${bestSignal.fallPct}%` }}
-                                        />
-                                    </div>
-                                    <span className='sc-pred-pct'>{bestSignal.fallPct.toFixed(1)}%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Market behaviour description */}
-                        <div className='sc-behaviour-box'>
-                            <span className='sc-behaviour-box__label'>Market Behaviour · {bestSignal.symbol}</span>
-                            <p>
-                                Scanning the last 120 ticks shows a{' '}
-                                <strong>{bestSignal.deviation.toFixed(1)}% deviation</strong> from the equilibrium in
-                                favour of <strong>{bestSignal.entry || bestSignal.signal}</strong>. Confidence level{' '}
-                                <strong>{bestSignal.confidence.toFixed(1)}%</strong>. Signal expires in{' '}
-                                <strong>{validity}s</strong>.
-                                {bestSignal.prediction !== null &&
-                                    ` Suggested barrier / digit: ${bestSignal.prediction}.`}
-                            </p>
-                        </div>
+                    <div className='sc-suggestion-banner'>
+                        PRO SUGGESTION: {tradeType === 'OVERUNDER' ? `Use ${bestSignal.entry} ${Array.isArray(bestSignal.prediction) ? bestSignal.prediction.join(', ') : bestSignal.prediction}` : bestSignal.entry}
                     </div>
                 </div>
             )}
 
-            {/* ══ BOT EXECUTION PANEL ══ */}
             <div className='sc-bot-panel'>
-                <div className='sc-bot-panel__header'>
-                    <span className='sc-bot-panel__icon'>🤖</span>
-                    <span>Run Bot with Signal</span>
-                    {isBotRunning && <span className='sc-bot-running-badge'>RUNNING</span>}
-                </div>
-
                 <div className='sc-bot-inputs'>
                     <div className='sc-bot-field'>
-                        <label htmlFor='sc-stake'>Stake (USD)</label>
-                        <input
-                            id='sc-stake'
-                            type='number'
-                            min='0.35'
-                            step='0.1'
-                            value={stake}
-                            onChange={e => setStake(parseFloat(e.target.value) || 0.35)}
-                            disabled={isBotRunning}
-                        />
+                        <label>Stake (USD)</label>
+                        <input type='number' value={stake} onChange={e => setStake(parseFloat(e.target.value))} />
                     </div>
                     <div className='sc-bot-field'>
-                        <label htmlFor='sc-tp'>Take Profit</label>
-                        <input
-                            id='sc-tp'
-                            type='number'
-                            min='1'
-                            step='1'
-                            value={tp}
-                            onChange={e => setTp(parseFloat(e.target.value) || 1)}
-                            disabled={isBotRunning}
-                        />
-                    </div>
-                    <div className='sc-bot-field'>
-                        <label htmlFor='sc-sl'>Stop Loss</label>
-                        <input
-                            id='sc-sl'
-                            type='number'
-                            min='1'
-                            step='1'
-                            value={sl}
-                            onChange={e => setSl(parseFloat(e.target.value) || 1)}
-                            disabled={isBotRunning}
-                        />
-                    </div>
-                    <div className='sc-bot-field sc-bot-field--toggle'>
-                        <label>Martingale</label>
-                        <div
-                            id='sc-martingale-toggle'
-                            className={classNames('sc-toggle', { active: martingale })}
-                            onClick={() => !isBotRunning && setMartingale(m => !m)}
-                        >
-                            <div className='sc-toggle__knob' />
+                        <label>TP / SL</label>
+                        <div className='sc-input-group'>
+                            <input type='number' value={tp} onChange={e => setTp(parseFloat(e.target.value))} placeholder='TP' />
+                            <input type='number' value={sl} onChange={e => setSl(parseFloat(e.target.value))} placeholder='SL' />
                         </div>
-                        {martingale && (
-                            <input
-                                className='sc-martingale-mult'
-                                id='sc-martingale-mult'
-                                type='number'
-                                min='1.1'
-                                max='5'
-                                step='0.1'
-                                value={martingaleMultiplier}
-                                onChange={e => setMartingaleMultiplier(parseFloat(e.target.value) || 2)}
-                                disabled={isBotRunning}
-                            />
-                        )}
+                    </div>
+                    <div className='sc-bot-field'>
+                        <label>Ticks</label>
+                        <select value={ticks} onChange={e => setTicks(parseInt(e.target.value))}>
+                            {[1, 2, 3, 4, 5].map(t => <option key={t} value={t}>{t} Ticks</option>)}
+                        </select>
+                    </div>
+                    <div className='sc-bot-field'>
+                        <label>Bulk</label>
+                        <input type='number' value={bulkTrades} min='1' max='10' onChange={e => setBulkTrades(parseInt(e.target.value))} />
                     </div>
                 </div>
-
-                {/* Bot stats */}
-                {botWins + botLosses > 0 && (
-                    <div className='sc-bot-stats'>
-                        <div className='sc-bot-stat'>
-                            <span>P/L</span>
-                            <span className={botPL >= 0 ? 'profit' : 'loss'}>
-                                {botPL >= 0 ? '+' : ''}
-                                {botPL.toFixed(2)}
-                            </span>
-                        </div>
-                        <div className='sc-bot-stat'>
-                            <span>Wins</span>
-                            <span className='profit'>{botWins}</span>
-                        </div>
-                        <div className='sc-bot-stat'>
-                            <span>Losses</span>
-                            <span className='loss'>{botLosses}</span>
-                        </div>
-                        <div className='sc-bot-stat'>
-                            <span>Stake</span>
-                            <span>{currentBotStake.toFixed(2)}</span>
-                        </div>
-                    </div>
-                )}
-
+                <div className='sc-bot-toggles'>
+                    <button className={classNames('sc-toggle-btn', { active: compoundStake })} onClick={() => setCompoundStake(!compoundStake)}>
+                        🔄 Compounding
+                    </button>
+                    <button className={classNames('sc-toggle-btn', { active: alternateMarket })} onClick={() => setAlternateMarket(!alternateMarket)}>
+                        🔀 Alt Market
+                    </button>
+                </div>
                 <button
-                    id='sc-run-bot-btn'
-                    className={classNames('sc-run-bot-btn', {
-                        running: isBotRunning,
-                        disabled: !bestSignal && !isBotRunning,
-                    })}
-                    onClick={() => {
-                        if (isBotRunning) {
-                            botRef.current = false;
-                            setIsBotRunning(false);
-                            addLog('⏹ Bot stopped by user');
-                        } else if (bestSignal) {
-                            setBotPL(0);
-                            setBotWins(0);
-                            setBotLosses(0);
-                            setCurrentBotStake(stake);
-                            setIsBotRunning(true);
-                        }
-                    }}
-                    disabled={!isBotRunning && !bestSignal}
+                    className={classNames('sc-run-btn', { running: isBotRunning })}
+                    onClick={() => setIsBotRunning(!isBotRunning)}
+                    disabled={!bestSignal && !isBotRunning}
                 >
-                    {isBotRunning
-                        ? '⛔ STOP BOT'
-                        : !bestSignal
-                          ? '🔍 Scan First to Enable'
-                          : '🚀 START BOT WITH THIS SIGNAL'}
+                    {isBotRunning ? '⛔ STOP BOT' : bestSignal ? '🚀 START BOT' : '🔍 Scan for Signal'}
                 </button>
+            </div>
 
-                {/* Console log */}
-                {botLog.length > 0 && (
-                    <div className='sc-bot-console'>
-                        <div className='sc-bot-console__header'>Bot Console</div>
-                        {botLog.map((line, i) => (
-                            <div key={i} className='sc-bot-console__line'>
-                                {line}
-                            </div>
-                        ))}
-                    </div>
-                )}
+            <div className='sc-dashboard'>
+                <div className='sc-dashboard__tabs'>
+                    {['SUMMARY', 'TRANSACTIONS', 'JOURNAL'].map(tab => (
+                        <button key={tab} className={classNames('sc-tab', { active: activeDashboardTab === tab })} onClick={() => setActiveDashboardTab(tab as any)}>
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+                <div className='sc-dashboard__content'>
+                    {activeDashboardTab === 'SUMMARY' && (
+                        <div className='sc-summary'>
+                            <div className='sc-summary-card'><span>P/L</span><strong className={botPL >= 0 ? 'profit' : 'loss'}>{botPL.toFixed(2)}</strong></div>
+                            <div className='sc-summary-card'><span>Wins</span><strong>{botWins}</strong></div>
+                            <div className='sc-summary-card'><span>Losses</span><strong>{botLosses}</strong></div>
+                        </div>
+                    )}
+                    {activeDashboardTab === 'TRANSACTIONS' && (
+                        <div className='sc-transactions'>
+                            {transactions.map((tx, i) => (
+                                <div key={i} className='sc-tx-row'>
+                                    <span>{tx.time}</span><span>{tx.symbol}</span><span className={tx.status}>{tx.profit.toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {activeDashboardTab === 'JOURNAL' && (
+                        <div className='sc-journal'>
+                            {botLog.map((log, i) => <div key={i} className='sc-log-line'>{log}</div>)}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

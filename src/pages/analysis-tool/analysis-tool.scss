@@ -1,4 +1,4 @@
-﻿@use '@/components/shared/styles/_mixins.scss' as *;
+@use '@/components/shared/styles/_mixins.scss' as *;
 @use 'components/shared/styles/mixins' as *;
 
 .analysis-tool {
@@ -30,17 +30,17 @@
     &__tabs {
         display: flex;
         gap: 1rem;
-        margin-bottom: rem(32px);
-        padding: rem(8px);
+        margin-bottom: to-rem(32px);
+        padding: to-rem(8px);
         background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(rem(10px));
-        border-radius: rem(12px);
+        backdrop-filter: blur(to-rem(10px));
+        border-radius: to-rem(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         overflow-x: auto;
 
         button {
-            padding: rem(16px) rem(32px);
-            border-radius: rem(8px);
+            padding: to-rem(16px) to-rem(32px);
+            border-radius: to-rem(8px);
             border: none;
             background: transparent;
             color: var(--text-general);
@@ -83,11 +83,11 @@
     &__content {
         flex: 1;
         background: rgba(255, 255, 255, 0.02);
-        backdrop-filter: blur(rem(20px));
-        border-radius: rem(16px);
-        padding: rem(32px);
+        backdrop-filter: blur(to-rem(20px));
+        border-radius: to-rem(16px);
+        padding: to-rem(32px);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 rem(8px) rem(32px) 0 rgba(0, 0, 0, 0.3);
+        box-shadow: 0 to-rem(8px) to-rem(32px) 0 rgba(0, 0, 0, 0.3);
         overflow-y: auto;
         animation: fade-in 0.5s ease;
 
@@ -103,3 +103,4 @@
         }
     }
 }
+

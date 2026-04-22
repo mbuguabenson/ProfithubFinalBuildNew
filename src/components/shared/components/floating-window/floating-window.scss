@@ -1,4 +1,4 @@
-﻿@use '@/components/shared/styles/_mixins.scss' as *;
+@use '@/components/shared/styles/_mixins.scss' as *;
 @use 'components/shared/styles/mixins' as *;
 
 .floating-window {
@@ -7,11 +7,11 @@
     left: 0;
     background: rgb(4 8 20 / 95%);
     border: 1px solid rgb(255 255 255 / 10%);
-    border-radius: rem(12px);
+    border-radius: to-rem(12px);
     box-shadow:
-        0 rem(10px) rem(40px) rgb(0 0 0 / 50%),
+        0 to-rem(10px) to-rem(40px) rgb(0 0 0 / 50%),
         inset 0 0 0 1px rgb(255 255 255 / 5%);
-    backdrop-filter: blur(rem(16px));
+    backdrop-filter: blur(to-rem(16px));
     display: flex;
     flex-direction: column;
     font-family:
@@ -48,17 +48,17 @@
     }
 
     .fw-header {
-        height: rem(40px);
-        min-height: rem(40px);
+        height: to-rem(40px);
+        min-height: to-rem(40px);
         background: rgb(255 255 255 / 3%);
         border-bottom: 1px solid rgb(255 255 255 / 5%);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 rem(16px);
+        padding: 0 to-rem(16px);
         cursor: grab;
         user-select: none;
-        border-radius: rem(12px) rem(12px) 0 0;
+        border-radius: to-rem(12px) to-rem(12px) 0 0;
 
         &:active {
             cursor: grabbing;
@@ -74,15 +74,15 @@
 
         .fw-controls {
             display: flex;
-            gap: rem(8px);
+            gap: to-rem(8px);
 
             .fw-btn {
                 background: rgb(255 255 255 / 5%);
                 border: none;
                 color: rgb(255 255 255 / 60%);
-                width: rem(24px);
-                height: rem(24px);
-                border-radius: rem(4px);
+                width: to-rem(24px);
+                height: to-rem(24px);
+                border-radius: to-rem(4px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -110,18 +110,18 @@
 
         /* Scrollbar styles for the content */
         &::-webkit-scrollbar {
-            width: rem(8px);
-            height: rem(8px);
+            width: to-rem(8px);
+            height: to-rem(8px);
         }
 
         &::-webkit-scrollbar-track {
             background: rgb(0 0 0 / 20%);
-            border-radius: rem(4px);
+            border-radius: to-rem(4px);
         }
 
         &::-webkit-scrollbar-thumb {
             background: rgb(255 255 255 / 10%);
-            border-radius: rem(4px);
+            border-radius: to-rem(4px);
 
             &:hover {
                 background: rgb(255 255 255 / 20%);
@@ -199,3 +199,4 @@
         }
     }
 }
+

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Brain, Download, RefreshCw, ShieldAlert, Target, Timer, Zap } from 'lucide-react';
+import { Activity, Brain, Download, RefreshCw, ShieldAlert, Target, Timer, Zap, Settings2, BarChart3, ListOrdered, BookOpen, ChevronRight, Layers } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useDeriv } from '@/hooks/use-deriv';
@@ -135,6 +135,15 @@ const SignalsTab = observer(() => {
     };
 
     const [showLogs, setShowLogs] = useState(false);
+    const [activeStrategy, setActiveStrategy] = useState('matches');
+    const [dashboardTab, setDashboardTab] = useState('summary');
+
+    const strategies = [
+        { id: 'matches', name: 'Matches', icon: Target, color: '#a855f7' },
+        { id: 'evenodd', name: 'Even/Odd', icon: Layers, color: '#6366f1' },
+        { id: 'overunder', name: 'Over/Under', icon: BarChart3, color: '#10b981' },
+        { id: 'risefall', name: 'Rise/Fall', icon: Activity, color: '#f59e0b' },
+    ];
 
     if (!analysis) {
         return (
@@ -178,13 +187,27 @@ const SignalsTab = observer(() => {
                             />
                         </div>
                         <div className='setting-item'>
-                            <label>TAKE PROFIT</label>
+                            <label>BULK</label>
                             <input
                                 type='number'
-                                value={smart_trading.take_profit}
-                                onChange={e => smart_trading.setTakeProfit(parseFloat(e.target.value))}
+                                min='1'
+                                max='10'
+                                value={smart_trading.signals_settings.bulk_count}
+                                onChange={e => (smart_trading.signals_settings.bulk_count = parseInt(e.target.value))}
                             />
                         </div>
+                    </div>
+                    <div className='advanced-toggles'>
+                        <button
+                            className={`toggle-btn ${smart_trading.signals_settings.use_compounding ? 'active' : ''}`}
+                            onClick={() =>
+                                (smart_trading.signals_settings.use_compounding =
+                                    !smart_trading.signals_settings.use_compounding)
+                            }
+                            title='Compounding Stake'
+                        >
+                            <RefreshCw size={16} />
+                        </button>
                     </div>
                     <div className={`connection-status connection-status--${connectionStatus}`}>
                         <div className='dot' />
@@ -194,6 +217,21 @@ const SignalsTab = observer(() => {
                         <Activity size={20} />
                     </button>
                 </div>
+            </div>
+
+            <div className='signals-tab__strategy-tabs'>
+                {strategies.map(strat => (
+                    <button
+                        key={strat.id}
+                        className={`strategy-btn ${activeStrategy === strat.id ? 'active' : ''}`}
+                        onClick={() => setActiveStrategy(strat.id)}
+                        style={{ '--strat-color': strat.color } as any}
+                    >
+                        <strat.icon size={18} />
+                        <span>{strat.name}</span>
+                        {activeStrategy === strat.id && <div className='active-indicator' />}
+                    </button>
+                ))}
             </div>
 
             <div className='signals-tab__stats-bar'>
@@ -216,6 +254,35 @@ const SignalsTab = observer(() => {
                     </span>
                 </div>
             </div>
+
+            <section className='signals-tab__prediction-grid'>
+                <div className='grid-header'>
+                    <div className='title'>
+                        <Brain size={20} />
+                        <h3>Strategy Analysis Grid</h3>
+                    </div>
+                    <div className='legend'>
+                        <span className='dot hot' /> <span>Hot</span>
+                        <span className='dot cold' /> <span>Cold</span>
+                    </div>
+                </div>
+                <div className='grid-content'>
+                    {Array.from({ length: 10 }).map((_, i) => {
+                        const freq = analysis.digitFrequencies.find(f => f.digit === i);
+                        const isHot = freq ? freq.percentage > 12 : false;
+                        const isCold = freq ? freq.percentage < 8 : false;
+                        return (
+                            <div key={i} className={`grid-item ${isHot ? 'hot' : ''} ${isCold ? 'cold' : ''}`}>
+                                <span className='digit'>{i}</span>
+                                <span className='pct'>{freq ? freq.percentage.toFixed(1) : '0.0'}%</span>
+                                <div className='mini-bar'>
+                                    <div className='fill' style={{ width: `${freq ? freq.percentage * 5 : 0}%` }} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </section>
 
             <section className='signals-tab__section'>
                 <div className='section-title'>
@@ -300,6 +367,109 @@ const SignalsTab = observer(() => {
                     </div>
                 </section>
             )}
+
+            <section className='signals-tab__dashboard'>
+                <div className='dashboard-header'>
+                    <div className='tabs'>
+                        <button
+                            className={dashboardTab === 'summary' ? 'active' : ''}
+                            onClick={() => setDashboardTab('summary')}
+                        >
+                            <BarChart3 size={16} /> Summary
+                        </button>
+                        <button
+                            className={dashboardTab === 'transactions' ? 'active' : ''}
+                            onClick={() => setDashboardTab('transactions')}
+                        >
+                            <ListOrdered size={16} /> Transactions
+                        </button>
+                        <button
+                            className={dashboardTab === 'journal' ? 'active' : ''}
+                            onClick={() => setDashboardTab('journal')}
+                        >
+                            <BookOpen size={16} /> Journal
+                        </button>
+                    </div>
+                </div>
+
+                <div className='dashboard-content'>
+                    {dashboardTab === 'summary' && (
+                        <div className='summary-view'>
+                            <div className='summary-grid'>
+                                <div className='summary-card'>
+                                    <span className='label'>Total Wins</span>
+                                    <span className='value win'>{smart_trading.wins}</span>
+                                </div>
+                                <div className='summary-card'>
+                                    <span className='label'>Total Losses</span>
+                                    <span className='value loss'>{smart_trading.losses}</span>
+                                </div>
+                                <div className='summary-card'>
+                                    <span className='label'>Session P/L</span>
+                                    <span className='value' style={{ color: smart_trading.session_pl >= 0 ? '#10b981' : '#ef4444' }}>
+                                        {smart_trading.session_pl.toFixed(2)} USD
+                                    </span>
+                                </div>
+                                <div className='summary-card'>
+                                    <span className='label'>Win Rate</span>
+                                    <span className='value'>
+                                        {smart_trading.wins + smart_trading.losses > 0
+                                            ? ((smart_trading.wins / (smart_trading.wins + smart_trading.losses)) * 100).toFixed(1)
+                                            : '0.0'}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {dashboardTab === 'transactions' && (
+                        <div className='transactions-view'>
+                            <table className='transactions-table'>
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Type</th>
+                                        <th>Stake</th>
+                                        <th>Result</th>
+                                        <th>Profit/Loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {smart_trading.manual_trade_history.map((trade, i) => (
+                                        <tr key={i}>
+                                            <td>{new Date(trade.timestamp).toLocaleTimeString()}</td>
+                                            <td>{trade.contractType}</td>
+                                            <td>{trade.stake}</td>
+                                            <td className={trade.result.toLowerCase()}>{trade.result}</td>
+                                            <td className={trade.profitLoss >= 0 ? 'win' : 'loss'}>
+                                                {trade.profitLoss.toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {smart_trading.manual_trade_history.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className='empty'>No transactions yet</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {dashboardTab === 'journal' && (
+                        <div className='journal-view'>
+                            <div className='journal-logs'>
+                                {connectionLogs.slice(-10).map((log, i) => (
+                                    <div key={i} className='journal-entry'>
+                                        <ChevronRight size={14} />
+                                        <span>{log}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </section>
 
             {showLogs && (
                 <div className='signals-tab__logs'>

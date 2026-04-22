@@ -11,9 +11,9 @@
 
 .tabs-shadow {
     position: absolute;
-    top: rem(8px);
-    height: rem(40px);
-    width: rem(64px);
+    top: to-rem(8px);
+    height: to-rem(40px);
+    width: to-rem(64px);
     z-index: 1;
     pointer-events: none;
 
@@ -190,7 +190,7 @@
                 }
 
                 &::-webkit-scrollbar {
-                    height: rem(4px);
+                    height: to-rem(4px);
                 }
 
                 &::-webkit-scrollbar-track {
@@ -469,11 +469,11 @@
         }
 
         &--expanded {
-            width: calc(100vw - rem(398px));
+            width: calc(100vw - to-rem(398px));
         }
 
         &--modal {
-            width: rem(400px);
+            width: to-rem(400px);
         }
     }
 
@@ -481,8 +481,8 @@
         position: absolute;
         top: 0;
         inset-inline-start: 0;
-        width: rem(236px);
-        padding: rem(8px);
+        width: to-rem(236px);
+        padding: to-rem(8px);
         background: var(--general-main-1);
         z-index: 1;
 
@@ -1132,3 +1132,4 @@
         transform: translateY(0);
     }
 }
+

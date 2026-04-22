@@ -3,7 +3,7 @@
 
 .smart-auto-v3 {
     min-height: 100vh;
-    padding: rem(24px);
+    padding: to-rem(24px);
     background:
         radial-gradient(circle at 100% 0%, rgb(6 182 212 / 5%) 0%, transparent 50%),
         radial-gradient(circle at 0% 100%, rgb(16 185 129 / 3%) 0%, transparent 50%), #05080c;
@@ -11,11 +11,11 @@
     font-family: var(--font-body);
     display: flex;
     flex-direction: column;
-    gap: rem(20px);
+    gap: to-rem(20px);
 
     @include mobile-screen {
-        padding: rem(16px);
-        gap: rem(16px);
+        padding: to-rem(16px);
+        gap: to-rem(16px);
     }
 
     .num {
@@ -26,7 +26,7 @@
         background: rgb(255 255 255 / 2%);
         backdrop-filter: blur(24px);
         border: 1px solid rgb(255 255 255 / 6%);
-        border-radius: rem(20px);
+        border-radius: to-rem(20px);
         box-shadow: 0 10px 40px rgb(0 0 0 / 30%);
         transition: all 0.3s ease;
         overflow: hidden;
@@ -41,7 +41,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: rem(20px);
+        margin-bottom: to-rem(20px);
 
         h3 {
             font-family: var(--font-display);
@@ -51,19 +51,19 @@
         }
 
         p {
-            font-size: rem(11px);
+            font-size: to-rem(11px);
             color: rgb(148 163 184 / 50%);
-            margin: rem(4px) 0 0;
+            margin: to-rem(4px) 0 0;
         }
     }
 
     // --- 1. Top Strategy Tabs ---
     .strategy-tabs-row {
         display: flex;
-        gap: rem(12px);
-        padding: rem(6px);
+        gap: to-rem(12px);
+        padding: to-rem(6px);
         background: rgb(255 255 255 / 2%);
-        border-radius: rem(16px);
+        border-radius: to-rem(16px);
         width: fit-content;
 
         @include tablet-screen {
@@ -72,21 +72,21 @@
         }
 
         .strat-tab {
-            padding: rem(10px) rem(16px);
+            padding: to-rem(10px) to-rem(16px);
             background: transparent;
             border: none;
             color: #64748b;
             font-weight: 800;
-            font-size: rem(12px);
+            font-size: to-rem(12px);
             letter-spacing: 1px;
-            border-radius: rem(10px);
+            border-radius: to-rem(10px);
             cursor: pointer;
             transition: all 0.2s ease;
             white-space: nowrap;
 
             @include mobile-screen {
-                padding: rem(8px) rem(12px);
-                font-size: rem(11px);
+                padding: to-rem(8px) to-rem(12px);
+                font-size: to-rem(11px);
             }
 
             &:hover {
@@ -105,23 +105,23 @@
     // --- 2. Command Header ---
     .command-header {
         display: flex;
-        gap: rem(40px);
-        padding: rem(20px) rem(32px);
+        gap: to-rem(40px);
+        padding: to-rem(20px) to-rem(32px);
         align-items: center;
 
         @include tablet-screen {
             flex-direction: column;
             align-items: flex-start;
-            gap: rem(24px);
+            gap: to-rem(24px);
         }
 
         .h-group {
             display: flex;
             flex-direction: column;
-            gap: rem(6px);
+            gap: to-rem(6px);
 
             label {
-                font-size: rem(10px);
+                font-size: to-rem(10px);
                 font-weight: 900;
                 color: #475569;
                 letter-spacing: 1px;
@@ -132,7 +132,7 @@
                 border: none;
                 color: #fff;
                 font-weight: 800;
-                font-size: rem(16px);
+                font-size: to-rem(16px);
                 outline: none;
                 cursor: pointer;
             }
@@ -140,18 +140,18 @@
             .depth-input {
                 background: rgb(0 0 0 / 20%);
                 border: 1px solid rgb(255 255 255 / 6%);
-                width: rem(80px);
-                padding: rem(6px) rem(12px);
-                border-radius: rem(8px);
+                width: to-rem(80px);
+                padding: to-rem(6px) to-rem(12px);
+                border-radius: to-rem(8px);
                 color: #06b6d4;
-                font-size: rem(14px);
+                font-size: to-rem(14px);
                 font-weight: 800;
                 outline: none;
 
                 @include mobile-screen {
-                    width: rem(60px);
-                    padding: rem(4px) rem(8px);
-                    font-size: rem(12px);
+                    width: to-rem(60px);
+                    padding: to-rem(4px) to-rem(8px);
+                    font-size: to-rem(12px);
                 }
 
                 &:focus {
@@ -160,31 +160,31 @@
             }
 
             .price-display {
-                font-size: rem(24px);
+                font-size: to-rem(24px);
                 font-weight: 800;
                 color: #fff;
 
                 @include mobile-screen {
-                    font-size: rem(18px);
+                    font-size: to-rem(18px);
                 }
             }
 
             .digit-preview {
-                width: rem(48px);
-                height: rem(48px);
+                width: to-rem(48px);
+                height: to-rem(48px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background: rgb(255 255 255 / 3%);
-                border-radius: rem(12px);
-                font-size: rem(24px);
+                border-radius: to-rem(12px);
+                font-size: to-rem(24px);
                 font-weight: 900;
                 border: 2px solid rgb(255 255 255 / 8%);
 
                 @include mobile-screen {
-                    width: rem(36px);
-                    height: rem(36px);
-                    font-size: rem(18px);
+                    width: to-rem(36px);
+                    height: to-rem(36px);
+                    font-size: to-rem(18px);
                 }
 
                 &.even {
@@ -207,17 +207,17 @@
             .connection-badge {
                 display: flex;
                 align-items: center;
-                gap: rem(12px);
-                padding: rem(10px) rem(18px);
+                gap: to-rem(12px);
+                padding: to-rem(10px) to-rem(18px);
                 background: rgb(255 255 255 / 2%);
-                border-radius: rem(100px);
-                font-size: rem(11px);
+                border-radius: to-rem(100px);
+                font-size: to-rem(11px);
                 font-weight: 900;
                 color: #475569;
 
                 .pulse-dot {
-                    width: rem(8px);
-                    height: rem(8px);
+                    width: to-rem(8px);
+                    height: to-rem(8px);
                     background: #475569;
                     border-radius: 50%;
                 }
@@ -239,7 +239,7 @@
     .command-workspace {
         display: grid;
         grid-template-columns: 1fr 420px;
-        gap: rem(20px);
+        gap: to-rem(20px);
 
         @include tablet-screen {
             grid-template-columns: 1fr;
@@ -250,18 +250,18 @@
     .analysis-column {
         display: flex;
         flex-direction: column;
-        gap: rem(20px);
+        gap: to-rem(20px);
 
         .stats-panel {
-            padding: rem(28px);
+            padding: to-rem(28px);
         }
 
         .frequency-bars-v3 {
             display: flex;
-            height: rem(200px);
+            height: to-rem(200px);
             align-items: flex-end;
-            padding: rem(20px);
-            gap: rem(10px);
+            padding: to-rem(20px);
+            gap: to-rem(10px);
 
             .bar-item {
                 flex: 1;
@@ -269,11 +269,11 @@
                 flex-direction: column;
                 align-items: center;
                 height: 100%;
-                gap: rem(8px);
+                gap: to-rem(8px);
                 position: relative;
 
                 .bar-pct {
-                    font-size: rem(10px);
+                    font-size: to-rem(10px);
                     font-weight: 800;
                     color: #475569;
                 }
@@ -282,7 +282,7 @@
                     flex: 1;
                     width: 100%;
                     background: rgb(255 255 255 / 2%);
-                    border-radius: rem(6px);
+                    border-radius: to-rem(6px);
                     display: flex;
                     align-items: flex-end;
                     overflow: hidden;
@@ -295,16 +295,16 @@
                 }
 
                 .bar-label {
-                    font-size: rem(18px);
+                    font-size: to-rem(18px);
                     font-weight: 900;
                     color: #64748b;
                 }
 
                 .live-cursor {
                     position: absolute;
-                    bottom: rem(-24px);
+                    bottom: to-rem(-24px);
                     color: #f59e0b;
-                    font-size: rem(12px);
+                    font-size: to-rem(12px);
                     animation: bounce-up-v3 1s infinite alternate;
                 }
 
@@ -341,20 +341,20 @@
         .intelligence-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: rem(16px);
+            gap: to-rem(16px);
 
             @include mobile-screen {
                 grid-template-columns: 1fr;
             }
 
             .intel-card {
-                padding: rem(20px);
+                padding: to-rem(20px);
                 display: flex;
                 flex-direction: column;
-                gap: rem(12px);
+                gap: to-rem(12px);
 
                 label {
-                    font-size: rem(10px);
+                    font-size: to-rem(10px);
                     font-weight: 900;
                     color: #475569;
                     letter-spacing: 0.5px;
@@ -362,16 +362,16 @@
 
                 .dual-stat-bar {
                     display: flex;
-                    height: rem(14px);
+                    height: to-rem(14px);
                     background: rgb(255 255 255 / 2%);
-                    border-radius: rem(100px);
+                    border-radius: to-rem(100px);
                     overflow: hidden;
 
                     .side {
                         display: flex;
                         align-items: center;
-                        padding: 0 rem(8px);
-                        font-size: rem(9px);
+                        padding: 0 to-rem(8px);
+                        font-size: to-rem(9px);
                         font-weight: 900;
                         transition: width 0.6s ease;
 
@@ -400,14 +400,14 @@
                     justify-content: space-between;
 
                     .hot-item {
-                        font-size: rem(10px);
+                        font-size: to-rem(10px);
                         font-weight: 800;
                         color: #475569;
 
                         span {
-                            font-size: rem(14px);
+                            font-size: to-rem(14px);
                             font-weight: 900;
-                            margin-left: rem(6px);
+                            margin-left: to-rem(6px);
                         }
 
                         .ev,
@@ -425,7 +425,7 @@
                 .target-info {
                     display: flex;
                     flex-direction: column;
-                    gap: rem(8px);
+                    gap: to-rem(8px);
 
                     .t-row {
                         display: flex;
@@ -433,13 +433,13 @@
                         align-items: center;
 
                         .lbl {
-                            font-size: rem(10px);
+                            font-size: to-rem(10px);
                             font-weight: 800;
                             color: #475569;
                         }
 
                         .val {
-                            font-size: rem(16px);
+                            font-size: to-rem(16px);
                             font-weight: 900;
 
                             &.m {
@@ -458,7 +458,7 @@
         .grid-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: rem(20px);
+            gap: to-rem(20px);
 
             @include mobile-screen {
                 grid-template-columns: 1fr;
@@ -467,27 +467,27 @@
 
         .velocity-panel,
         .strategy-monitor {
-            padding: rem(24px);
+            padding: to-rem(24px);
         }
 
         .history-strip.large {
             display: flex;
-            gap: rem(4px);
+            gap: to-rem(4px);
             flex-wrap: wrap;
-            margin-top: rem(10px);
-            max-height: rem(100px);
+            margin-top: to-rem(10px);
+            max-height: to-rem(100px);
             overflow-y: auto;
 
             .hist-box {
-                width: rem(24px);
-                height: rem(24px);
+                width: to-rem(24px);
+                height: to-rem(24px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: rem(9px);
+                font-size: to-rem(9px);
                 font-weight: 900;
                 background: rgb(255 255 255 / 2%);
-                border-radius: rem(4px);
+                border-radius: to-rem(4px);
                 border: 1px solid rgb(255 255 255 / 4%);
 
                 &.E {
@@ -509,18 +509,18 @@
         .digits-grid-v3 {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: rem(8px);
-            padding: rem(24px);
+            gap: to-rem(8px);
+            padding: to-rem(24px);
 
             .digit-cell {
-                height: rem(36px);
+                height: to-rem(36px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background: rgb(255 255 255 / 2%);
                 border: 1px solid rgb(255 255 255 / 4%);
-                border-radius: rem(8px);
-                font-size: rem(14px);
+                border-radius: to-rem(8px);
+                font-size: to-rem(14px);
                 font-weight: 800;
 
                 &.even {
@@ -545,7 +545,7 @@
     .control-column {
         display: flex;
         flex-direction: column;
-        gap: rem(20px);
+        gap: to-rem(20px);
 
         .config-panel,
         .execution-panel,
@@ -553,46 +553,46 @@
         .telemetry-panel,
         .signal-intel-card,
         .manual-override-panel {
-            padding: rem(24px);
+            padding: to-rem(24px);
         }
 
         .signal-intel-card {
             background: linear-gradient(135deg, rgb(6 182 212 / 5%) 0%, rgb(0 0 0 / 10%) 100%);
 
             .sig-result .val {
-                font-size: rem(24px);
+                font-size: to-rem(24px);
                 font-weight: 900;
                 color: #06b6d4;
                 text-shadow: 0 0 10px rgb(6 182 212 / 50%);
             }
 
             .strength-track {
-                height: rem(8px);
+                height: to-rem(8px);
                 background: rgb(255 255 255 / 3%);
-                border-radius: rem(100px);
+                border-radius: to-rem(100px);
                 position: relative;
-                margin-top: rem(8px);
+                margin-top: to-rem(8px);
 
                 .fill {
                     height: 100%;
                     background: linear-gradient(90deg, #06b6d4, #10b981);
-                    border-radius: rem(100px);
+                    border-radius: to-rem(100px);
                     transition: width 0.6s ease;
                 }
 
                 .pct {
                     position: absolute;
                     right: 0;
-                    top: rem(-20px);
-                    font-size: rem(10px);
+                    top: to-rem(-20px);
+                    font-size: to-rem(10px);
                     font-weight: 900;
                     color: #10b981;
                 }
             }
 
             .status-dot {
-                width: rem(10px);
-                height: rem(10px);
+                width: to-rem(10px);
+                height: to-rem(10px);
                 border-radius: 50%;
                 background: #4b5563;
 
@@ -603,7 +603,7 @@
             }
 
             .logic-insight.v2 p {
-                font-size: rem(12px);
+                font-size: to-rem(12px);
                 color: rgb(255 255 255 / 40%);
                 line-height: 1.4;
             }
@@ -617,27 +617,27 @@
                 background: rgb(0 0 0 / 30%);
                 border: 1px solid rgb(255 255 255 / 6%);
                 color: #fff;
-                padding: rem(10px);
-                border-radius: rem(8px);
-                font-size: rem(13px);
+                padding: to-rem(10px);
+                border-radius: to-rem(8px);
+                font-size: to-rem(13px);
                 font-weight: 700;
                 width: 100%;
                 outline: none;
             }
 
             .mart-row {
-                margin-top: rem(20px);
+                margin-top: to-rem(20px);
                 align-items: center;
             }
 
             .toggle-field {
                 display: flex;
                 flex-direction: column;
-                gap: rem(6px);
+                gap: to-rem(6px);
 
                 input[type='checkbox'] {
-                    width: rem(20px);
-                    height: rem(20px);
+                    width: to-rem(20px);
+                    height: to-rem(20px);
                     cursor: pointer;
                     accent-color: #f59e0b;
                 }
@@ -647,15 +647,15 @@
         .config-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: rem(16px);
+            gap: to-rem(16px);
 
             .input-field {
                 display: flex;
                 flex-direction: column;
-                gap: rem(6px);
+                gap: to-rem(6px);
 
                 label {
-                    font-size: rem(10px);
+                    font-size: to-rem(10px);
                     font-weight: 900;
                     color: #475569;
                 }
@@ -664,9 +664,9 @@
                     background: rgb(0 0 0 / 20%);
                     border: 1px solid rgb(255 255 255 / 8%);
                     color: #fff;
-                    padding: rem(10px);
-                    border-radius: rem(8px);
-                    font-size: rem(16px);
+                    padding: to-rem(10px);
+                    border-radius: to-rem(8px);
+                    font-size: to-rem(16px);
                     font-weight: 800;
                     width: 100%;
                     outline: none;
@@ -681,20 +681,20 @@
         .btn-stack {
             display: flex;
             flex-direction: column;
-            gap: rem(16px);
+            gap: to-rem(16px);
 
             .exec-btn {
                 display: flex;
                 align-items: center;
-                gap: rem(16px);
-                padding: rem(18px);
+                gap: to-rem(16px);
+                padding: to-rem(18px);
                 border: none;
-                border-radius: rem(16px);
+                border-radius: to-rem(16px);
                 cursor: pointer;
                 transition: all 0.3s ease;
 
                 .icon {
-                    font-size: rem(24px);
+                    font-size: to-rem(24px);
                 }
 
                 .label {
@@ -702,12 +702,12 @@
                     flex-direction: column;
 
                     span {
-                        font-size: rem(14px);
+                        font-size: to-rem(14px);
                         font-weight: 900;
                     }
 
                     small {
-                        font-size: rem(10px);
+                        font-size: to-rem(10px);
                         opacity: 0.5;
                     }
                 }
@@ -752,13 +752,13 @@
                 flex-direction: column;
 
                 label {
-                    font-size: rem(10px);
+                    font-size: to-rem(10px);
                     font-weight: 900;
                     color: #475569;
                 }
 
                 .val {
-                    font-size: rem(22px);
+                    font-size: to-rem(22px);
                     font-weight: 800;
 
                     &.pos {
@@ -770,7 +770,7 @@
                     }
 
                     &.status {
-                        font-size: rem(12px);
+                        font-size: to-rem(12px);
                         color: #94a3b8;
                     }
                 }
@@ -786,24 +786,24 @@
             .log-container {
                 flex: 1;
                 overflow-y: auto;
-                max-height: rem(180px);
-                margin-top: rem(10px);
+                max-height: to-rem(180px);
+                margin-top: to-rem(10px);
                 display: flex;
                 flex-direction: column;
-                gap: rem(6px);
+                gap: to-rem(6px);
 
                 .empty-log {
-                    font-size: rem(12px);
+                    font-size: to-rem(12px);
                     color: rgb(255 255 255 / 10%);
                     text-align: center;
-                    margin-top: rem(40px);
+                    margin-top: to-rem(40px);
                 }
 
                 .log-entry {
-                    font-size: rem(11px);
+                    font-size: to-rem(11px);
                     display: grid;
                     grid-template-columns: 80px 1fr;
-                    gap: rem(10px);
+                    gap: to-rem(10px);
 
                     .time {
                         color: rgb(255 255 255 / 20%);
@@ -857,3 +857,4 @@
         transform: translateY(-5px);
     }
 }
+
