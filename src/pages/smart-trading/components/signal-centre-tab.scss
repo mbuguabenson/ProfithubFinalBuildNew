@@ -1,313 +1,352 @@
 /* ══════════════════════════════════════════════════
-   SIGNAL CENTRE – BOLD & VIBRANT PRO DESIGN
-   Designed for maximum visibility and impact
+   SIGNAL CENTRE – TAILWIND-INSPIRED MODERN UI
    ══════════════════════════════════════════════════ */
 
 :root {
-    --sc-bg-dark: #020408;
-    --sc-glass: rgba(20, 20, 40, 0.7);
-    --sc-glass-hover: rgba(30, 30, 60, 0.9);
-    --sc-border: rgba(255, 255, 255, 0.1);
-    --sc-border-bright: rgba(255, 255, 255, 0.25);
+    --sc-bg: #030712; /* Tailwind gray-950 */
+    --sc-card-bg: rgba(17, 24, 39, 0.7); /* Tailwind gray-900 with opacity */
+    --sc-glass-border: rgba(255, 255, 255, 0.1);
     
-    --sc-glow-indigo: 0 0 30px rgba(99, 102, 241, 0.6);
-    --sc-glow-amber: 0 0 30px rgba(245, 158, 11, 0.6);
-    --sc-glow-emerald: 0 0 30px rgba(16, 185, 129, 0.6);
-    --sc-glow-rose: 0 0 30px rgba(244, 63, 94, 0.6);
+    /* Strategy Gradients */
+    --grad-eo: linear-gradient(135deg, #3b82f6, #8b5cf6); /* Blue to Purple */
+    --grad-ou: linear-gradient(135deg, #10b981, #14b8a6); /* Green to Teal */
+    --grad-matches: linear-gradient(135deg, #f59e0b, #eab308); /* Orange to Yellow */
+    --grad-trader: linear-gradient(135deg, #ef4444, #ec4899); /* Red to Pink */
 }
 
 .signal-centre {
     min-height: 100vh;
-    background: 
-        radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.2) 0%, transparent 40%),
-        radial-gradient(circle at 100% 0%, rgba(236, 72, 153, 0.15) 0%, transparent 40%),
-        var(--sc-bg-dark);
-    padding: 32px;
+    background-color: var(--sc-bg);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.1) 0px, transparent 50%);
+    color: #f3f4f6;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    font-family: 'Inter', sans-serif;
-    color: #ffffff;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &.evenodd { --sc-accent: #6366f1; --sc-accent-glow: rgba(99, 102, 241, 0.8); }
-    &.overunder { --sc-accent: #f59e0b; --sc-accent-glow: rgba(245, 158, 11, 0.8); }
-    &.matches { --sc-accent: #8b5cf6; --sc-accent-glow: rgba(139, 92, 246, 0.8); }
-    &.risefall { --sc-accent: #10b981; --sc-accent-glow: rgba(16, 185, 129, 0.8); }
-    &.differs { --sc-accent: #ec4899; --sc-accent-glow: rgba(236, 72, 153, 0.8); }
-}
-
-/* ── Pro Glass Panel ── */
-.sc-glass-panel {
-    background: var(--sc-glass);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--sc-border);
-    border-radius: 24px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &:hover {
-        border-color: var(--sc-border-bright);
-        background: var(--sc-glass-hover);
-        transform: translateY(-4px) scale(1.01);
-    }
-}
-
-/* ── Header ── */
-.sc-header {
-    @extend .sc-glass-panel;
-    padding: 32px 48px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-
-    &:before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; width: 6px; height: 100%;
-        background: var(--sc-accent, #6366f1);
-        box-shadow: 0 0 25px var(--sc-accent);
-    }
-
-    &__title {
-        h1 {
-            font-size: 36px;
-            font-weight: 900;
-            letter-spacing: -1.5px;
-            font-family: var(--font-display);
-            background: linear-gradient(90deg, #fff 30%, var(--sc-accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(255,255,255,0.1);
-        }
-        p {
-            font-size: 13px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            color: rgba(255,255,255,0.5);
-            margin-top: 6px;
-        }
-    }
-
-    &__status {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        font-size: 14px;
-        font-weight: 900;
-        background: rgba(0,0,0,0.3);
-        padding: 10px 20px;
-        border-radius: 99px;
-        border: 1px solid rgba(255,255,255,0.05);
-    }
-}
-
-.sc-status-dot {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: #f43f5e;
-    &.online {
-        background: #10b981;
-        box-shadow: 0 0 15px #10b981;
-        animation: sc-pulse-glow 1.5s infinite;
-    }
-}
-
-/* ── Trade Type Selectors ── */
-.sc-trade-type {
-    @extend .sc-glass-panel;
-    padding: 32px;
-    
-    &__label {
-        font-size: 13px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        color: rgba(255,255,255,0.4);
-        margin-bottom: 24px;
-        display: block;
-    }
-
-    &__buttons {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 20px;
-    }
-}
-
-.sc-type-btn {
-    height: 80px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    cursor: pointer;
+    gap: 24px;
+    font-family: 'Inter', system-ui, sans-serif;
     transition: all 0.3s ease;
-    color: rgba(255,255,255,0.5);
+}
 
-    &:hover {
-        background: rgba(255,255,255,0.1);
-        border-color: rgba(255,255,255,0.3);
-        transform: scale(1.05);
-    }
+/* ── Strategy Tabs ── */
+.sc-strategy-tabs {
+    display: flex;
+    gap: 16px;
+    padding: 8px;
+    background: rgba(31, 41, 55, 0.5); /* gray-800 */
+    border-radius: 16px;
+    width: fit-content;
+}
+
+.sc-tab-item {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
     &.active {
-        background: linear-gradient(135deg, var(--sc-accent), rgba(0,0,0,0.4));
-        border-color: #fff;
         color: #fff;
-        box-shadow: 0 0 30px -5px var(--sc-accent);
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         
-        .sc-type-btn__icon { font-size: 32px; filter: drop-shadow(0 0 12px #fff); }
+        &.evenodd { background: var(--grad-eo); border-color: rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+        &.overunder { background: var(--grad-ou); border-color: rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        &.matches { background: var(--grad-matches); border-color: rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+        &.differs { background: var(--grad-trader); border-color: rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
     }
 
-    &__icon { font-size: 28px; transition: all 0.3s; }
-    &__label { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+    &:hover:not(.active) {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+    }
 }
 
-/* ── Market Cards Grid ── */
+/* ── Glassmorphism Card ── */
+.sc-card {
+    background: var(--sc-card-bg);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--sc-glass-border);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Market Grid ── */
 .sc-market-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 24px;
 }
 
 .sc-market-card {
-    @extend .sc-glass-panel;
-    padding: 32px;
+    @extend .sc-card;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    min-height: 200px;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease;
 
-    &:before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; width: 6px; height: 100%;
-        background: var(--strategy-color, #6366f1);
-        box-shadow: 0 0 20px var(--strategy-color);
-        opacity: 0.2;
+    &:hover {
+        transform: translateY(-8px);
+        border-color: rgba(255,255,255,0.2);
     }
 
-    &:hover:before { opacity: 1; }
-
-    &__name { font-size: 18px; font-weight: 900; color: #fff; }
-    &__sym { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--strategy-color, #6366f1); font-weight: 800; }
-
-    .sc-stat-bar-group {
-        .sc-stat-label { 
-            font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.7); 
-            display: flex; justify-content: space-between; margin-bottom: 8px;
-        }
-        .sc-stat-progress {
-            height: 10px; background: rgba(0,0,0,0.5); border-radius: 99px; overflow: hidden;
-            .fill { height: 100%; background: var(--strategy-color, #6366f1); border-radius: 99px; box-shadow: 0 0 10px var(--strategy-color); }
-        }
-    }
-
-    .sc-confidence-badge {
-        font-size: 11px; font-weight: 900; background: #fff; color: #000;
-        padding: 6px 12px; border-radius: 8px; letter-spacing: 1px;
+    &.active {
+        border-color: var(--strategy-color);
+        box-shadow: 0 0 30px -10px var(--strategy-color);
     }
 }
 
-/* ── Suggestion Reactor ── */
-.sc-best-signal {
-    @extend .sc-glass-panel;
-    padding: 48px;
-    background: radial-gradient(circle at 50% 50%, rgba(var(--sc-accent-rgb, 99, 102, 241), 0.2) 0%, transparent 70%);
+.sc-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     
-    &__header {
-        display: flex;
-        align-items: center;
-        gap: 32px;
-        margin-bottom: 32px;
+    .name { font-weight: 800; font-size: 16px; }
+    .symbol { font-size: 12px; color: #6b7280; font-family: monospace; }
+}
+
+/* ── Dynamic Stats Panel ── */
+.sc-stats-container {
+    animation: sc-fade-slide 0.4s ease-out;
+}
+
+@keyframes sc-fade-slide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.sc-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    
+    label { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; }
+    .value { font-weight: 800; font-size: 18px; }
+}
+
+.sc-progress-wrapper {
+    height: 8px;
+    background: #1f2937;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+    
+    .fill {
+        height: 100%;
+        background: var(--strategy-color);
+        box-shadow: 0 0 10px var(--strategy-color);
+        transition: width 0.5s ease;
+    }
+}
+
+/* ── Pro Suggestion Banner ── */
+.sc-signal-banner {
+    @extend .sc-card;
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+    border-width: 2px;
+    border-color: var(--sc-accent);
+    box-shadow: 0 0 40px -15px var(--sc-accent);
+    
+    .label { font-size: 14px; font-weight: 900; letter-spacing: 4px; color: var(--sc-accent); }
+    .signal { font-size: 48px; font-weight: 900; letter-spacing: -1px; text-shadow: 0 0 20px var(--sc-accent); }
+}
+
+/* ── Bottom Trade Panel ── */
+.sc-bottom-panel {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    @extend .sc-card;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin: 24px -24px -24px;
+    padding: 0;
+    z-index: 100;
+    background: rgba(17, 24, 39, 0.95);
+}
+
+.sc-panel-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    
+    button {
+        flex: 1;
+        padding: 16px;
+        background: transparent;
+        border: none;
+        color: #6b7280;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        position: relative;
+        transition: color 0.3s;
         
-        h2 { font-size: 42px; font-weight: 900; font-family: var(--font-display); text-shadow: 0 0 20px rgba(255,255,255,0.3); }
-        
-        .sc-best-signal__validity { 
-            margin-left: auto; text-align: right;
-            .sc-v-label { font-size: 11px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
-            .sc-v-val { 
-                font-size: 36px; font-weight: 900; color: var(--sc-accent);
-                text-shadow: 0 0 25px var(--sc-accent);
+        &.active {
+            color: #fff;
+            &:after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 20%;
+                right: 20%;
+                height: 3px;
+                background: var(--sc-accent);
+                border-radius: 3px 3px 0 0;
+                box-shadow: 0 -2px 10px var(--sc-accent);
             }
         }
     }
 }
 
-.sc-suggestion-banner {
-    background: rgba(0,0,0,0.6);
-    border: 2px solid var(--sc-accent);
-    border-radius: 24px;
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    box-shadow: 0 0 60px -20px var(--sc-accent);
+.sc-panel-content {
+    padding: 24px;
+    max-height: 300px;
+    overflow-y: auto;
+}
 
-    &__label {
-        font-size: 18px; font-weight: 900; letter-spacing: 6px; color: var(--sc-accent);
+/* ── Table Styling ── */
+.sc-modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    
+    th {
+        text-align: left;
+        padding: 12px;
+        color: #4b5563;
+        font-size: 12px;
+        font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: 1px;
     }
-}
-
-.sc-signal-text-glow {
-    font-size: 48px; font-weight: 900; color: #fff;
-    text-shadow: 0 0 30px var(--sc-accent-glow);
-    letter-spacing: 2px;
-}
-
-.sc-digit-pill {
-    width: 64px; height: 64px; border-radius: 16px;
-    background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
-    color: #fff; font-size: 28px; font-weight: 900;
     
-    &.active {
-        background: var(--sc-accent); border-color: #fff;
-        box-shadow: 0 0 30px var(--sc-accent);
-        transform: scale(1.2);
+    tr {
+        background: rgba(255,255,255,0.02);
+        border-radius: 12px;
+        
+        td {
+            padding: 16px 12px;
+            font-weight: 600;
+            &:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+            &:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+        }
     }
 }
 
-/* ── Controls ── */
+/* ── Journal ── */
+.sc-journal-area {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 16px;
+    color: #fff;
+    font-family: inherit;
+    min-height: 120px;
+    resize: none;
+    &:focus { outline: 1px solid var(--sc-accent); }
+}
+
+.sc-save-btn {
+    margin-top: 12px;
+    padding: 10px 24px;
+    background: var(--sc-accent);
+    border-radius: 10px;
+    font-weight: 700;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+}
+
+.sc-bot-field {
+    label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #6b7280; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+    input, select {
+        width: 100%; height: 48px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px; color: #fff; padding: 0 16px; font-weight: 700; font-family: monospace;
+        transition: all 0.3s;
+        &:focus { border-color: var(--sc-accent); outline: none; box-shadow: 0 0 15px -5px var(--sc-accent); }
+    }
+}
+
 .sc-run-btn {
-    height: 80px; border-radius: 20px; font-size: 24px; font-weight: 900;
+    width: 100%; height: 56px; border-radius: 12px; border: none; font-size: 16px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 1px; color: #fff; cursor: pointer;
     background: linear-gradient(90deg, #10b981, #059669);
-    box-shadow: 0 12px 48px -12px rgba(16, 185, 129, 0.7);
-    
+    box-shadow: 0 10px 20px -10px #10b981;
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 15px 25px -10px #10b981; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
     &.running {
         background: linear-gradient(90deg, #f43f5e, #e11d48);
-        box-shadow: 0 12px 48px -12px rgba(244, 63, 94, 0.7);
+        box-shadow: 0 10px 20px -10px #f43f5e;
     }
 }
 
-/* ── Dashboard ── */
+.sc-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
 .sc-summary-item {
-    padding: 48px 32px;
-    label { font-size: 13px; font-weight: 900; color: rgba(255,255,255,0.4); }
+    background: rgba(255,255,255,0.02);
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.05);
+
+    label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
     span { 
-        font-size: 48px; font-weight: 900;
-        &.won { color: #10b981; text-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
-        &.lost { color: #f43f5e; text-shadow: 0 0 30px rgba(244, 63, 94, 0.6); }
+        font-size: 24px; font-weight: 900; color: #fff; 
+        &.won { color: #10b981; }
+        &.lost { color: #f43f5e; }
+    }
+}
+.sc-tick-tracker {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.5);
+    padding: 12px 24px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.05);
+    
+    .ticks { display: flex; gap: 8px; }
+    .digit {
+        width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        background: #1f2937;
+        border-radius: 8px;
+        font-weight: 900;
+        font-size: 16px;
+        &.active { background: #fff; color: #000; box-shadow: 0 0 15px #fff; }
     }
 }
 
-.sc-table {
-    th { font-size: 13px; font-weight: 900; color: #fff; padding: 24px; }
-    td { font-size: 15px; padding: 24px; font-weight: 700; }
-}
-
-/* ── Animations ── */
-@keyframes sc-pulse-glow {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.1); opacity: 0.8; }
-    100% { transform: scale(1); opacity: 1; }
+@media (max-width: 768px) {
+    .sc-market-grid { grid-template-columns: 1fr; }
+    .sc-summary-grid { grid-template-columns: 1fr; }
 }

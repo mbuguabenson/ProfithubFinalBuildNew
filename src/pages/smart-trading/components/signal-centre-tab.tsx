@@ -3,6 +3,7 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { observer as globalObserver } from '@/external/bot-skeleton';
+import { LayoutGrid, BarChart3, Target, Activity, FileText, History, Save, ShieldCheck } from 'lucide-react';
 import './signal-centre-tab.scss';
 
 /* ─────────────────────── CONSTANTS ─────────────────────── */
@@ -21,11 +22,10 @@ const CONTINUOUS_INDICES = [
 ];
 
 const TRADE_TYPES = [
-    { id: 'EVENODD', label: 'Even / Odd', icon: '⚖️', color: '#6366f1' },
-    { id: 'OVERUNDER', label: 'Over / Under', icon: '📊', color: '#f59e0b' },
-    { id: 'MATCHES', label: 'Matches', icon: '🎯', color: '#8b5cf6' },
-    { id: 'RISEFALL', label: 'Rise / Fall', icon: '📈', color: '#10b981' },
-    { id: 'DIFFERS', label: 'Differs', icon: '🎯', color: '#ec4899' },
+    { id: 'EVENODD', label: 'Even / Odd', icon: <Activity />, color: '#6366f1', className: 'evenodd' },
+    { id: 'OVERUNDER', label: 'Over / Under', icon: <BarChart3 />, color: '#10b981', className: 'overunder' },
+    { id: 'MATCHES', label: 'Matches', icon: <Target />, color: '#f59e0b', className: 'matches' },
+    { id: 'DIFFERS', label: 'One Trader', icon: <ShieldCheck />, color: '#ef4444', className: 'differs' },
 ];
 
 const SIGNAL_VALIDITY_SECONDS = 45;
@@ -38,14 +38,17 @@ interface MarketAnalysis {
     ticks: number[];
     evenPct: number;
     oddPct: number;
-    overPct: number; // digits 5-9
-    underPct: number; // digits 0-4
+    overPct: number;
+    underPct: number;
     risePct: number;
     fallPct: number;
-    differsBest: number; // safest digit to differ
-    matchesBest: number; // hottest digit to match
-    deviation: number; // how far the dominant side is from 50%
-    confidence: number; // 0-100
+    differsBest: number;
+    matchesBest: number;
+    evenStreak: number;
+    oddStreak: number;
+    freq: Record<number, number>;
+    deviation: number;
+    confidence: number;
     signal: string;
     entry: string;
     tradeType: string;
@@ -68,20 +71,23 @@ function analyseMarket(
     const over = last.filter(d => d >= 5).length;
     const under = total - over;
 
-    let rises = 0,
-        falls = 0;
+    // Streaks
+    let evenStreak = 0, oddStreak = 0;
+    for (let i = last.length - 1; i >= 0; i--) {
+        if (last[i] % 2 === 0) { evenStreak++; if (oddStreak > 0) break; }
+        else { oddStreak++; if (evenStreak > 0) break; }
+    }
+
+    let rises = 0, falls = 0;
     for (let i = 1; i < last.length; i++) {
         if (last[i] > last[i - 1]) rises++;
         else if (last[i] < last[i - 1]) falls++;
     }
     const rf_total = rises + falls || 1;
 
-    // Digit frequency map
     const freq: Record<number, number> = {};
     for (let d = 0; d < 10; d++) freq[d] = 0;
-    last.forEach(d => {
-        if (d >= 0 && d <= 9) freq[d]++;
-    });
+    last.forEach(d => { if (d >= 0 && d <= 9) freq[d]++; });
 
     const evenPct = (even / total) * 100;
     const oddPct = (odd / total) * 100;
@@ -90,26 +96,18 @@ function analyseMarket(
     const risePct = (rises / rf_total) * 100;
     const fallPct = (falls / rf_total) * 100;
 
-    // Hottest / coldest digit
     const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
     const matchesBest = Number(sorted[0][0]);
     const differsBest = Number(sorted[sorted.length - 1][0]);
 
-    let deviation = 0,
-        signal = 'STANDBY',
-        entry = '',
-        prediction: number | number[] | null = null,
-        score = 0;
+    let deviation = 0, signal = 'STANDBY', entry = '', prediction: number | number[] | null = null, score = 0;
 
     switch (tradeType) {
         case 'EVENODD': {
             const dom = evenPct > oddPct ? 'EVEN' : 'ODD';
             deviation = Math.abs(evenPct - oddPct);
             score = Math.min(deviation * 3, 100);
-            if (deviation >= thresholds.eo) {
-                signal = dom === 'EVEN' ? 'BUY EVEN' : 'BUY ODD';
-                entry = dom;
-            }
+            if (deviation >= thresholds.eo) { signal = dom === 'EVEN' ? 'BUY EVEN' : 'BUY ODD'; entry = dom; }
             break;
         }
         case 'OVERUNDER': {
@@ -119,37 +117,7 @@ function analyseMarket(
             if (deviation >= thresholds.ou) {
                 signal = dom === 'OVER' ? 'BUY OVER' : 'BUY UNDER';
                 entry = dom;
-                
-                if (dom === 'OVER') {
-                    // Suggest barriers for Over: If Over 0 is > 55%
-                    prediction = overPct > 55 ? [0, 1, 2, 3] : 0;
-                } else {
-                    // Suggest barriers for Under: If Under 9 is > 55%
-                    prediction = underPct > 55 ? [9, 8, 7, 6] : 9;
-                }
-            }
-            break;
-        }
-        case 'RISEFALL': {
-            const dom = risePct > fallPct ? 'RISE' : 'FALL';
-            deviation = Math.abs(risePct - fallPct);
-            score = Math.min(deviation * 2.5, 100);
-            if (deviation >= thresholds.rf) {
-                signal = dom === 'RISE' ? 'BUY RISE' : 'BUY FALL';
-                entry = dom;
-            }
-            break;
-        }
-        case 'DIFFERS': {
-            const leastFreq = sorted[sorted.length - 1][1];
-            const leastDigit = Number(sorted[sorted.length - 1][0]);
-            const leastPct = (leastFreq / total) * 100;
-            deviation = 10 - leastPct;
-            score = Math.min(deviation * 5, 100);
-            if (score >= 40) {
-                signal = `DIFFER ${leastDigit}`;
-                entry = `Avoid digit ${leastDigit}`;
-                prediction = leastDigit;
+                prediction = dom === 'OVER' ? (overPct > 55 ? [0, 1, 2, 3] : 0) : (underPct > 55 ? [9, 8, 7, 6] : 9);
             }
             break;
         }
@@ -159,15 +127,16 @@ function analyseMarket(
             const mostPct = (mostFreq / total) * 100;
             deviation = mostPct - 10;
             score = Math.min(deviation * 8, 100);
-            
-            // Multiple predictions for matches: top 3 hottest digits
-            const top3 = sorted.slice(0, 3).map(s => Number(s[0]));
-            
-            if (score >= 30) {
-                signal = `MATCH ${mostDigit}`;
-                entry = `Target digit ${mostDigit}`;
-                prediction = top3;
-            }
+            if (score >= 30) { signal = `MATCH ${mostDigit}`; entry = `Target digit ${mostDigit}`; prediction = sorted.slice(0, 3).map(s => Number(s[0])); }
+            break;
+        }
+        case 'DIFFERS': {
+            const leastFreq = sorted[sorted.length - 1][1];
+            const leastDigit = Number(sorted[sorted.length - 1][0]);
+            const leastPct = (leastFreq / total) * 100;
+            deviation = 10 - leastPct;
+            score = Math.min(deviation * 5, 100);
+            if (score >= 40) { signal = `DIFFER ${leastDigit}`; entry = `Avoid digit ${leastDigit}`; prediction = leastDigit; }
             break;
         }
     }
@@ -175,24 +144,9 @@ function analyseMarket(
     const confidence = Math.min(score * (Math.min(total, 120) / 120), 100);
 
     return {
-        symbol,
-        label,
-        ticks: last,
-        evenPct,
-        oddPct,
-        overPct,
-        underPct,
-        risePct,
-        fallPct,
-        differsBest,
-        matchesBest,
-        deviation,
-        confidence,
-        signal: signal || 'STANDBY',
-        entry,
-        tradeType,
-        prediction,
-        score,
+        symbol, label, ticks: last, evenPct, oddPct, overPct, underPct, risePct, fallPct,
+        differsBest, matchesBest, evenStreak, oddStreak, freq, deviation, confidence,
+        signal, entry, tradeType, prediction, score,
     };
 }
 
@@ -203,7 +157,7 @@ const SignalCentreTab = observer(() => {
     const { is_socket_opened } = common;
     const currency = smart_trading?.root_store?.client?.currency || 'USD';
 
-    // ── Local state ──
+    // ── UI State ──
     const [tradeType, setTradeType] = useState<string>('EVENODD');
     const [isScanning, setIsScanning] = useState(false);
     const [scanPhase, setScanPhase] = useState<string>('STANDBY');
@@ -211,20 +165,19 @@ const SignalCentreTab = observer(() => {
     const [analyses, setAnalyses] = useState<MarketAnalysis[]>([]);
     const [bestSignal, setBestSignal] = useState<MarketAnalysis | null>(null);
     const [validity, setValidity] = useState(0);
+    const [activePanelTab, setActivePanelTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
+    const [journalNote, setJournalNote] = useState('');
 
     // Bot settings
     const [stake, setStake] = useState(1.0);
     const [tp, setTp] = useState(10);
     const [sl, setSl] = useState(10);
-    const [martingale] = useState(false);
-    const [martingaleMultiplier] = useState(2.0);
     const [isBotRunning, setIsBotRunning] = useState(false);
     const [botLog, setBotLog] = useState<string[]>([]);
     const [botPL, setBotPL] = useState(0);
     const [botWins, setBotWins] = useState(0);
     const [botLosses, setBotLosses] = useState(0);
     const [ticks, setTicks] = useState(1);
-    const [bulkTrades, setBulkTrades] = useState(1);
     const [compoundStake, setCompoundStake] = useState(false);
     const [alternateMarket, setAlternateMarket] = useState(false);
     const [alternateAfterLosses, setAlternateAfterLosses] = useState(3);
@@ -232,28 +185,17 @@ const SignalCentreTab = observer(() => {
     const [alternateTradeType, setAlternateTradeType] = useState('EVENODD');
     const [consecutiveLosses, setConsecutiveLosses] = useState(0);
     const [transactions, setTransactions] = useState<any[]>([]);
-    const [activeDashboardTab, setActiveDashboardTab] = useState<'SUMMARY' | 'TRANSACTIONS' | 'JOURNAL'>('SUMMARY');
-
-    const [useMultipleMatches, setUseMultipleMatches] = useState(false);
-    const [matchPredictions, setMatchPredictions] = useState<number[]>([0]);
     const [manualPrediction, setManualPrediction] = useState<number | null>(null);
-    const [evenOddThreshold, setEvenOddThreshold] = useState(7);
-    const [overUnderThreshold, setOverUnderThreshold] = useState(7);
-    const [riseFallThreshold, setRiseFallThreshold] = useState(8);
-    const [showAdvanced, setShowAdvanced] = useState(false);
-
 
     const subsRef = useRef<Map<string, () => void>>(new Map());
     const scanRef = useRef(false);
     const validityRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const botRef = useRef(false);
     const botStakeRef = useRef(1.0);
-
     const api_base_ref = useRef<any>(null);
+
     useEffect(() => {
-        import('@/external/bot-skeleton').then(mod => {
-            api_base_ref.current = mod.api_base.api;
-        });
+        import('@/external/bot-skeleton').then(mod => { api_base_ref.current = mod.api_base.api; });
     }, []);
 
     const subscribeSymbol = useCallback((sym: string): Promise<number[]> => {
@@ -261,44 +203,19 @@ const SignalCentreTab = observer(() => {
             if (!api_base_ref.current) { resolve([]); return; }
             const acc: number[] = [];
             const api = api_base_ref.current;
-            
             const doRequest = async () => {
                 try {
-                    const resp = await api.send({
-                        ticks_history: sym,
-                        count: 120,
-                        end: 'latest',
-                        style: 'ticks',
-                        subscribe: 1,
-                    });
-                    
+                    const resp = await api.send({ ticks_history: sym, count: 120, end: 'latest', style: 'ticks', subscribe: 1 });
                     const hist = resp.history || resp.ticks_history;
-                    if (hist?.prices) {
-                        hist.prices.forEach((p: any) => {
-                            const s = String(p);
-                            const dig = parseInt(s[s.length - 1]);
-                            if (!isNaN(dig)) acc.push(dig);
-                        });
-                    }
-
+                    if (hist?.prices) hist.prices.forEach((p: any) => { const s = String(p); const dig = parseInt(s[s.length-1]); if (!isNaN(dig)) acc.push(dig); });
                     const streamId = resp.subscription?.id;
                     const sub = api.onMessage().subscribe((msg: any) => {
                         if (msg.msg_type === 'tick' && msg.tick?.symbol === sym) {
-                            const s = String(msg.tick.quote);
-                            const dig = parseInt(s[s.length - 1]);
-                            if (!isNaN(dig)) {
-                                acc.push(dig);
-                                if (acc.length > 120) acc.shift();
-                            }
+                            const s = String(msg.tick.quote); const dig = parseInt(s[s.length-1]);
+                            if (!isNaN(dig)) { acc.push(dig); if (acc.length > 120) acc.shift(); }
                         }
                     });
-
-
-                    subsRef.current.set(sym, () => {
-                        sub.unsubscribe();
-                        if (streamId) api.send({ forget: streamId }).catch(() => {});
-                    });
-
+                    subsRef.current.set(sym, () => { sub.unsubscribe(); if (streamId) api.send({ forget: streamId }).catch(() => {}); });
                     resolve([...acc]);
                 } catch (err) { resolve([]); }
             };
@@ -306,22 +223,14 @@ const SignalCentreTab = observer(() => {
         });
     }, []);
 
-    const clearAllSubs = useCallback(() => {
-        subsRef.current.forEach(unsub => unsub());
-        subsRef.current.clear();
-    }, []);
+    const clearAllSubs = useCallback(() => { subsRef.current.forEach(unsub => unsub()); subsRef.current.clear(); }, []);
 
     const startValidity = useCallback(() => {
         setValidity(SIGNAL_VALIDITY_SECONDS);
         if (validityRef.current) clearInterval(validityRef.current);
         validityRef.current = setInterval(() => {
             setValidity(v => {
-                if (v <= 1) {
-                    clearInterval(validityRef.current!);
-                    setBestSignal(null);
-                    setScanPhase('STANDBY');
-                    return 0;
-                }
+                if (v <= 1) { clearInterval(validityRef.current!); setBestSignal(null); setScanPhase('STANDBY'); return 0; }
                 return v - 1;
             });
         }, 1000);
@@ -341,37 +250,23 @@ const SignalCentreTab = observer(() => {
             if (!scanRef.current) break;
             const { symbol, label } = CONTINUOUS_INDICES[i];
             setScanningIndex(i);
-            const digits = await subscribeSymbol(symbol);
-            if (digits.length >= 20) {
-                const analysis = analyseMarket(symbol, label, digits, tradeType, {
-                    eo: evenOddThreshold,
-                    ou: overUnderThreshold,
-                    rf: riseFallThreshold
-                });
-                results.push(analysis);
+            const d = await subscribeSymbol(symbol);
+            if (d.length >= 20) {
+                const res = analyseMarket(symbol, label, d, tradeType);
+                results.push(res);
                 setAnalyses([...results]);
             }
             await new Promise(r => setTimeout(r, 600));
         }
 
         const found = results.filter(r => r.signal !== 'STANDBY').sort((a, b) => b.confidence - a.confidence)[0] || null;
-        if (found) {
-            setBestSignal(found);
-            setScanPhase('SIGNAL_FOUND');
-            startValidity();
-        } else {
-            setScanPhase('NO_SIGNAL');
-        }
+        if (found) { setBestSignal(found); setScanPhase('SIGNAL_FOUND'); startValidity(); } 
+        else { setScanPhase('NO_SIGNAL'); }
         setIsScanning(false);
         setScanningIndex(-1);
     }, [isScanning, tradeType, subscribeSymbol, clearAllSubs, startValidity]);
 
-    const stopScan = useCallback(() => {
-        scanRef.current = false;
-        setIsScanning(false);
-        setScanPhase('STANDBY');
-        clearAllSubs();
-    }, [clearAllSubs]);
+    const stopScan = useCallback(() => { scanRef.current = false; setIsScanning(false); setScanPhase('STANDBY'); clearAllSubs(); }, [clearAllSubs]);
 
     const executeTrade = useCallback(async (analysis: MarketAnalysis, stakeAmt: number, customPrediction?: number) => {
         if (!api_base_ref.current || !is_socket_opened) return null;
@@ -389,7 +284,6 @@ const SignalCentreTab = observer(() => {
                 contractType = 'DIGITMATCH';
                 barrier = customPrediction ?? (Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0));
                 break;
-            case 'RISEFALL': contractType = analysis.entry === 'RISE' ? 'CALL' : 'PUT'; break;
             case 'DIFFERS':
                 contractType = 'DIGITDIFF';
                 barrier = Array.isArray(analysis.prediction) ? analysis.prediction[0] : (analysis.prediction ?? 0);
@@ -397,81 +291,34 @@ const SignalCentreTab = observer(() => {
         }
 
         try {
-            const req: any = {
-                proposal: 1, amount: stakeAmt, basis: 'stake', contract_type: contractType,
-                currency: currency, duration: ticks, duration_unit: 't', symbol: analysis.symbol,
-            };
+            const req: any = { proposal: 1, amount: stakeAmt, basis: 'stake', contract_type: contractType, currency: currency, duration: ticks, duration_unit: 't', symbol: analysis.symbol };
             if (barrier !== undefined) req.barrier = barrier;
             const resp = await api.send(req);
-            if (resp.error) {
-                addLog(`❌ Proposal Error: ${resp.error.message}`);
-                globalObserver.emit('Error', resp.error);
-                return null;
-            }
-
-            globalObserver.emit('contract.status', { id: 'contract.purchase_sent' });
-
+            if (resp.error) return null;
             const buy = await api.send({ buy: resp.proposal.id, price: stakeAmt });
-            if (buy.error) {
-                addLog(`❌ Buy Error: ${buy.error.message}`);
-                globalObserver.emit('Error', buy.error);
-                return null;
-            }
-
-            globalObserver.emit('contract.status', { id: 'contract.purchase_received', buy: buy.buy });
             return buy.buy?.contract_id || null;
-        } catch (e: any) { 
-            addLog(`❌ Execution Exception: ${e.message || e}`);
-            return null; 
-        }
+        } catch (e) { return null; }
     }, [is_socket_opened, ticks, currency]);
 
-
-
-    const waitForResult = (id: string | number): Promise<{
-        status: string, 
-        profit: number, 
-        entry?: string, 
-        exit?: string, 
-        buyId?: string, 
-        sellId?: string, 
-        lastDigit?: number | null
-    } | null> => {
+    const waitForResult = (id: string | number): Promise<any> => {
         return new Promise(resolve => {
             const api = api_base_ref.current;
             if (!api) { resolve(null); return; }
-            
-            // Subscribe to POC for this contract
             api.send({ proposal_open_contract: 1, contract_id: id, subscribe: 1 });
-
             const sub = api.onMessage().subscribe((msg: any) => {
                 const poc = msg.proposal_open_contract;
                 if (poc && poc.contract_id == id && poc.is_sold) {
                     sub.unsubscribe();
-                    globalObserver.emit('bot.contract', poc);
-                    globalObserver.emit('contract.status', { id: 'contract.sold', contract: poc });
                     resolve({ 
-                        status: poc.status, 
-                        profit: parseFloat(poc.profit || '0'),
-                        entry: poc.entry_tick_display_value,
-                        exit: poc.exit_tick_display_value,
-                        buyId: poc.transaction_ids?.buy,
-                        sellId: poc.transaction_ids?.sell,
-                        lastDigit: poc.exit_tick_display_value ? parseInt(poc.exit_tick_display_value.slice(-1)) : null
+                        status: poc.status, profit: parseFloat(poc.profit || '0'),
+                        entry: poc.entry_tick_display_value, exit: poc.exit_tick_display_value,
+                        buyId: poc.transaction_ids?.buy, lastDigit: poc.exit_tick_display_value ? parseInt(poc.exit_tick_display_value.slice(-1)) : null
                     });
                 }
             });
-
-
-            
-            // Timeout after 30 seconds
-            setTimeout(() => { 
-                sub.unsubscribe(); 
-                resolve(null); 
-            }, 30000);
+            setTimeout(() => { sub.unsubscribe(); resolve(null); }, 30000);
         });
     };
-
 
     const addLog = (msg: string) => {
         const ts = new Date().toLocaleTimeString();
@@ -482,506 +329,250 @@ const SignalCentreTab = observer(() => {
         if (!bestSignal || !isBotRunning) return;
         botRef.current = true;
         botStakeRef.current = stake;
-        let runningPL = 0;
+        let rPL = 0;
         setConsecutiveLosses(0);
-        addLog(`🤖 Bot Started | Strategy: ${tradeType} | Stake: ${stake}`);
+        addLog(`🚀 Bot Active | Strategy: ${tradeType}`);
 
         while (botRef.current) {
             let currentAnalysis = bestSignal;
-            
-            // Override with manual prediction if set
-            if (manualPrediction !== null && currentAnalysis) {
-                currentAnalysis = { ...currentAnalysis, prediction: manualPrediction };
-            }
-
+            if (manualPrediction !== null && currentAnalysis) currentAnalysis = { ...currentAnalysis, prediction: manualPrediction };
             if (alternateMarket && consecutiveLosses >= alternateAfterLosses) {
-                addLog(`🔄 Recovery Mode: Switching to ${alternateMarketSymbol} (${alternateTradeType})`);
-                // Create a synthetic analysis for the alternate market
-                currentAnalysis = { 
-                    ...bestSignal, 
-                    symbol: alternateMarketSymbol, 
-                    tradeType: alternateTradeType,
-                    entry: alternateTradeType === 'EVENODD' ? 'EVEN' : 
-                           alternateTradeType === 'OVERUNDER' ? 'OVER' :
-                           alternateTradeType === 'RISEFALL' ? 'RISE' : 
-                           alternateTradeType === 'MATCHES' ? 'MATCH' : 'DIFF',
-                    prediction: alternateTradeType === 'OVERUNDER' ? 0 : 0
-                };
+                currentAnalysis = { ...bestSignal, symbol: alternateMarketSymbol, tradeType: alternateTradeType, entry: 'EVEN', prediction: 0 };
             }
 
-            const currentStake = botStakeRef.current;
-            const ids: string[] = [];
-
-            if (tradeType === 'MATCHES' && useMultipleMatches) {
-                for (const pred of matchPredictions) {
-                    for (let i = 0; i < bulkTrades; i++) {
-                        const id = await executeTrade(currentAnalysis, currentStake, pred);
-                        if (id) ids.push(id);
-                        await new Promise(r => setTimeout(r, 300)); 
-                    }
-                }
-            } else {
-                for (let i = 0; i < bulkTrades; i++) {
-                    const id = await executeTrade(currentAnalysis, currentStake);
-                    if (id) ids.push(id);
-                    await new Promise(r => setTimeout(r, 300));
-                }
-            }
-
-            if (ids.length === 0) {
-                addLog('⚠️ Execution failed - retrying...');
-                await new Promise(r => setTimeout(r, 2000));
-                continue;
-            }
-
-            addLog(`📤 ${ids.length} Trade(s) placed on ${currentAnalysis.symbol}`);
-            const results = await Promise.all(ids.map(id => waitForResult(id!)));
+            const id = await executeTrade(currentAnalysis, botStakeRef.current);
+            if (!id) { await new Promise(r => setTimeout(r, 2000)); continue; }
             
-            let batchP = 0, batchW = 0, batchL = 0;
-            results.forEach(res => {
-                if (!res) return;
-                batchP += res.profit;
-                if (res.status === 'won') batchW++; else batchL++;
-                
+            const res = await waitForResult(id);
+            if (res) {
+                rPL += res.profit;
+                if (res.status === 'won') { setBotWins(w => w + 1); setConsecutiveLosses(0); } else { setBotLosses(l => l + 1); setConsecutiveLosses(c => c + 1); }
+                setBotPL(rPL);
                 setTransactions(prev => [{
-                    id: res.buyId || Math.random().toString(36).substr(2, 9),
-                    time: new Date().toLocaleTimeString(),
-                    symbol: currentAnalysis.symbol,
-                    type: currentAnalysis.tradeType,
-                    stake: currentStake,
-                    profit: res.profit,
-                    status: res.status,
-                    entry: res.entry,
-                    exit: res.exit,
-                    lastDigit: res.lastDigit,
-                    power: currentAnalysis.confidence
-                }, ...prev].slice(0, 100));
-            });
+                    id: res.buyId, time: new Date().toLocaleTimeString(), symbol: currentAnalysis.symbol,
+                    type: currentAnalysis.tradeType, stake: botStakeRef.current, profit: res.profit, status: res.status,
+                    entry: res.entry, exit: res.exit, lastDigit: res.lastDigit, power: currentAnalysis.confidence
+                }, ...prev].slice(0, 50));
 
-            runningPL += batchP;
-            setBotWins(prev => prev + batchW);
-            setBotLosses(prev => prev + batchL);
-            setBotPL(runningPL);
+                if (compoundStake && res.profit > 0) botStakeRef.current = parseFloat((botStakeRef.current + res.profit).toFixed(2));
+                else botStakeRef.current = stake;
 
-            if (batchP > 0) {
-                setConsecutiveLosses(0);
-                addLog(`✅ Wins: ${batchW}, Losses: ${batchL} | Net: +${batchP.toFixed(2)}`);
-                if (compoundStake) {
-                    botStakeRef.current = parseFloat((botStakeRef.current + batchP).toFixed(2));
-                    addLog(`📈 Compounding → Stake: ${botStakeRef.current}`);
-                } else botStakeRef.current = stake;
-                
-                if (runningPL >= tp) { 
-                    addLog(`🏆 Take Profit hit! Total P/L: ${runningPL.toFixed(2)}`); 
-                    break; 
-                }
-            } else {
-                setConsecutiveLosses(prev => prev + 1);
-                addLog(`❌ Wins: ${batchW}, Losses: ${batchL} | Net: ${batchP.toFixed(2)}`);
-                if (martingale) {
-                    botStakeRef.current = Math.min(currentStake * martingaleMultiplier, 500);
-                    addLog(`📉 Martingale → Stake: ${botStakeRef.current.toFixed(2)}`);
-                } else botStakeRef.current = stake;
-
-                if (Math.abs(runningPL) >= sl && runningPL < 0) { 
-                    addLog(`🛑 Stop Loss hit! Total P/L: ${runningPL.toFixed(2)}`); 
-                    break;
-                }
+                if (rPL >= tp || (rPL <= -sl && rPL < 0)) break;
             }
             await new Promise(r => setTimeout(r, 1000));
         }
         setIsBotRunning(false);
         botRef.current = false;
-    }, [bestSignal, isBotRunning, stake, tp, sl, martingale, martingaleMultiplier, bulkTrades, compoundStake, alternateMarket, alternateAfterLosses, alternateMarketSymbol, alternateTradeType, consecutiveLosses, executeTrade, tradeType, useMultipleMatches, matchPredictions]);
+    }, [bestSignal, isBotRunning, stake, tp, sl, compoundStake, alternateMarket, alternateAfterLosses, alternateMarketSymbol, alternateTradeType, consecutiveLosses, executeTrade, tradeType, manualPrediction]);
 
-    useEffect(() => {
-        if (isBotRunning) runBotLoop();
-    }, [isBotRunning, runBotLoop]);
+    useEffect(() => { if (isBotRunning) runBotLoop(); }, [isBotRunning, runBotLoop]);
+
+    const activeAnalysis = bestSignal || (analyses.length > 0 ? analyses[0] : null);
 
     return (
         <div className={classNames('signal-centre', tradeType.toLowerCase())}>
-            <div className='sc-header'>
-                <div className='sc-header__title'>
-                    <span className='sc-header__icon'>📡</span>
-                    <div>
-                        <h1>SIGNAL CENTRE PRO</h1>
-                        <p>PREMIUM AI MARKET INTELLIGENCE • ALL VOLATILITY INDICES</p>
+            
+            {/* ── Top Bar: Tick Display ── */}
+            <div className='sc-tick-tracker'>
+                <div className='flex items-center gap-4'>
+                    <div className='text-xs font-black uppercase text-gray-500 tracking-widest'>Live Ticks</div>
+                    <div className='ticks'>
+                        {activeAnalysis?.ticks.slice(-10).map((t, i) => (
+                            <div key={i} className={classNames('digit', { active: i === 9 })}>{t}</div>
+                        ))}
                     </div>
                 </div>
-                <div className='sc-header__status'>
-                    <span className={classNames('sc-status-dot', { online: is_socket_opened })} />
-                    <span>{is_socket_opened ? 'LIVE' : 'OFFLINE'}</span>
+                <div className='flex items-center gap-4'>
+                    <div className={classNames('sc-status-dot', { online: is_socket_opened })} />
+                    <span className='text-xs font-black uppercase'>{is_socket_opened ? 'Connected' : 'Offline'}</span>
                 </div>
             </div>
 
-            <div className='sc-trade-type'>
-                <div className='sc-trade-type__label'>Preferred Strategy</div>
-                <div className='sc-trade-type__buttons'>
-                    {TRADE_TYPES.map(t => (
-                        <button
-                            key={t.id}
-                            className={classNames('sc-type-btn', { active: tradeType === t.id })}
-                            style={{ '--accent': t.color } as any}
-                            onClick={() => { setTradeType(t.id); setBestSignal(null); setAnalyses([]); setScanPhase('STANDBY'); }}
-                            disabled={isScanning}
-                        >
-                            <span className='sc-type-btn__icon'>{t.icon}</span>
-                            <span className='sc-type-btn__label'>{t.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className='sc-scan-controls'>
-                <div className='sc-scan-phase'>
-                    <div className={classNames('sc-phase-badge', scanPhase.toLowerCase())}>
-                        <span className='sc-phase-dot' />
-                        {scanPhase.replace('_', ' ')}
+            {/* ── Strategy Selection ── */}
+            <div className='sc-strategy-tabs'>
+                {TRADE_TYPES.map(t => (
+                    <div 
+                        key={t.id} 
+                        className={classNames('sc-tab-item', t.className, { active: tradeType === t.id })}
+                        onClick={() => { setTradeType(t.id); setBestSignal(null); setAnalyses([]); setScanPhase('STANDBY'); }}
+                    >
+                        <span className='icon'>{t.icon}</span>
+                        <span>{t.label}</span>
                     </div>
-                </div>
-                <div className='sc-scan-btns'>
-                    {!isScanning ? (
-                        <button className='sc-btn sc-btn--scan' onClick={runScan} disabled={!is_socket_opened}>
-                            🔍 Start Scanning
-                        </button>
-                    ) : (
-                        <button className='sc-btn sc-btn--stop' onClick={stopScan}>
-                            ⛔ Stop Scan
-                        </button>
-                    )}
-                </div>
+                ))}
             </div>
 
-            {(isScanning || analyses.length > 0) && (
+            {/* ── Main Dashboard Layout ── */}
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
+                
+                {/* ── Left: Market Grid ── */}
                 <div className='sc-market-grid'>
                     {CONTINUOUS_INDICES.map((m, idx) => {
                         const analysis = analyses.find(a => a.symbol === m.symbol);
                         const isActive = scanningIndex === idx;
+                        const cardTheme = TRADE_TYPES.find(t => t.id === tradeType)?.color;
+                        
                         return (
                             <div 
                                 key={m.symbol} 
-                                className={classNames('sc-market-card', tradeType.toLowerCase(), { active: isActive, complete: !!analysis })}
-                                style={{ '--strategy-color': analysis ? (tradeType === 'EVENODD' ? '#6366f1' : tradeType === 'OVERUNDER' ? '#f59e0b' : tradeType === 'RISEFALL' ? '#10b981' : '#8b5cf6') : '#6366f1' } as any}
+                                className={classNames('sc-market-card', { active: analysis?.symbol === bestSignal?.symbol })}
+                                style={{ '--strategy-color': cardTheme } as any}
                                 onClick={() => { if (analysis) { setBestSignal(analysis); setScanPhase('SIGNAL_FOUND'); startValidity(); } }}
                             >
-                                <div className='sc-market-card__header'>
-                                    <span className='sc-market-card__name'>{m.label}</span>
-                                    <span className='sc-market-card__sym'>{m.symbol}</span>
+                                <div className='sc-card-header'>
+                                    <div className='name'>{m.label}</div>
+                                    <div className='symbol'>{m.symbol}</div>
                                 </div>
+
                                 {analysis ? (
-                                    <div className='sc-market-stats'>
+                                    <div className='sc-stats-container'>
+                                        {/* Dynamic Stats Based on Strategy */}
                                         {tradeType === 'EVENODD' && (
-                                            <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>EVEN {analysis.evenPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.evenPct}%` }} /></div>
-                                                </div>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>ODD {analysis.oddPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.oddPct}%` }} /></div>
-                                                </div>
-                                            </div>
+                                            <>
+                                                <div className='sc-stat-row'><label>Even</label><span className='value'>{analysis.evenPct.toFixed(1)}%</span></div>
+                                                <div className='sc-progress-wrapper'><div className='fill' style={{ width: `${analysis.evenPct}%` }} /></div>
+                                                <div className='sc-stat-row mt-4'><label>Streaks</label><span className='text-xs font-bold'>E: {analysis.evenStreak} | O: {analysis.oddStreak}</span></div>
+                                            </>
                                         )}
                                         {tradeType === 'OVERUNDER' && (
-                                            <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>OVER {analysis.overPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.overPct}%` }} /></div>
-                                                </div>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>UNDER {analysis.underPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.underPct}%` }} /></div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {tradeType === 'RISEFALL' && (
-                                            <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>RISE {analysis.risePct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.risePct}%` }} /></div>
-                                                </div>
-                                                <div className='sc-stat-bar-group'>
-                                                    <div className='sc-stat-label'>FALL {analysis.fallPct.toFixed(1)}%</div>
-                                                    <div className='sc-stat-progress'><div className='fill' style={{ width: `${analysis.fallPct}%` }} /></div>
-                                                </div>
-                                            </div>
+                                            <>
+                                                <div className='sc-stat-row'><label>Over (5-9)</label><span className='value'>{analysis.overPct.toFixed(1)}%</span></div>
+                                                <div className='sc-progress-wrapper'><div className='fill' style={{ width: `${analysis.overPct}%` }} /></div>
+                                                <div className='sc-stat-row mt-4'><label>Trend</label><span className='text-xs font-bold'>{analysis.overPct > 50 ? 'BULLISH OVER' : 'BEARISH UNDER'}</span></div>
+                                            </>
                                         )}
                                         {tradeType === 'MATCHES' && (
-                                            <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-label'>HOTTEST: <span className='val'>{analysis.matchesBest}</span></div>
-                                                <div className='sc-stat-label'>CONFIDENCE: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
-                                            </div>
+                                            <>
+                                                <div className='sc-stat-row'><label>Hottest Digit</label><span className='value'>{analysis.matchesBest}</span></div>
+                                                <div className='grid grid-cols-5 gap-1 mt-2'>
+                                                    {Object.entries(analysis.freq).map(([d, f]) => (
+                                                        <div key={d} className='text-[8px] text-center bg-black/40 rounded p-1'>
+                                                            <div className='font-black'>{d}</div>
+                                                            <div className='opacity-50'>{((f/120)*100).toFixed(0)}%</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
                                         )}
                                         {tradeType === 'DIFFERS' && (
-                                            <div className='sc-strategy-specific-stats'>
-                                                <div className='sc-stat-label'>SAFEST: <span className='val'>{analysis.differsBest}</span></div>
-                                                <div className='sc-stat-label'>CONFIDENCE: <span className='val'>{analysis.confidence.toFixed(1)}%</span></div>
-                                            </div>
+                                            <>
+                                                <div className='sc-stat-row'><label>Avoid Digit</label><span className='value text-red-500'>{analysis.differsBest}</span></div>
+                                                <div className='sc-stat-row'><label>Safety</label><span className='value'>{analysis.confidence.toFixed(1)}%</span></div>
+                                            </>
                                         )}
-                                        <div className='sc-market-card__footer'>
-                                            <div className='sc-confidence-badge'>{analysis.confidence.toFixed(0)}% POWER</div>
-                                        </div>
                                     </div>
                                 ) : (
-                                    <div className='sc-market-loading'>
-                                        {isActive ? (
-                                            <div className='sc-loader-ring'>
-                                                <div />
-                                                <span>SCANNING</span>
-                                            </div>
-                                        ) : 'PENDING'}
+                                    <div className='flex items-center justify-center h-20 opacity-20'>
+                                        {isActive ? <div className='animate-pulse font-black text-xs'>SCANNING...</div> : <span className='text-[10px] uppercase font-black'>Pending</span>}
                                     </div>
                                 )}
                             </div>
                         );
                     })}
                 </div>
-            )}
 
-            {bestSignal && (
-                <div className='sc-best-signal sc-glass-panel'>
-                    <div className='sc-best-signal__header'>
-                        <span className='sc-best-signal__icon'>🔥</span>
-                        <div>
-                            <h2>{bestSignal.label}</h2>
-                            <p className='sc-best-signal__subtitle'>OPTIMIZED SIGNAL DETECTED</p>
-                        </div>
-                        <div className='sc-best-signal__validity'>
-                            <div className='sc-v-label'>VALID FOR</div>
-                            <div className='sc-v-val'>{validity}s</div>
-                        </div>
-                    </div>
+                {/* ── Right: Pro Suggestion & Bot Controls ── */}
+                <div className='flex flex-col gap-8'>
                     
-                    <div className='sc-suggestion-banner'>
-                        <div className='sc-suggestion-banner__label'>DIGIT CRACKER SUGGESTION:</div>
-                        <div className='sc-suggestion-banner__content'>
-                            {tradeType === 'OVERUNDER' ? (
-                                <div className='sc-manual-prediction-selector'>
-                                    <span className='sc-pred-type'>{bestSignal.entry}</span>
-                                    <div className='sc-digit-pills'>
-                                        {(Array.isArray(bestSignal.prediction) ? bestSignal.prediction : [bestSignal.prediction ?? 0]).map(d => (
-                                            <button 
-                                                key={d} 
-                                                className={classNames('sc-digit-pill', { active: manualPrediction === d })}
-                                                onClick={() => setManualPrediction(d === manualPrediction ? null : d)}
-                                            >
-                                                {d}
-                                            </button>
-                                        ))}
+                    {/* Suggestion Reactor */}
+                    {bestSignal && (
+                        <div className='sc-signal-banner' style={{ '--sc-accent': TRADE_TYPES.find(t => t.id === tradeType)?.color } as any}>
+                            <div className='label'>PREMIUM SIGNAL DETECTED</div>
+                            <div className='flex items-center gap-6'>
+                                <div className='signal'>{bestSignal.signal}</div>
+                                <div className='h-16 w-px bg-white/10' />
+                                <div className='sc-best-signal__validity'>
+                                    <div className='sc-v-label'>VALIDITY</div>
+                                    <div className='sc-v-val'>{validity}s</div>
+                                </div>
+                            </div>
+                            
+                            <div className='sc-suggestion-banner w-full'>
+                                <div className='label'>DIGIT CRACKER ADVICE</div>
+                                {tradeType === 'OVERUNDER' ? (
+                                    <div className='flex flex-col items-center gap-4'>
+                                        <div className='flex gap-2'>
+                                            {(Array.isArray(bestSignal.prediction) ? bestSignal.prediction : [bestSignal.prediction ?? 0]).map(d => (
+                                                <button key={d} className={classNames('sc-digit-pill', { active: manualPrediction === d })} onClick={() => setManualPrediction(d)}>
+                                                    {d}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className='text-[10px] font-black opacity-30 uppercase tracking-widest'>Select Barrier Manually</div>
                                     </div>
-                                    <small className='sc-click-hint'>CLICK TO OVERRIDE PREDICTION</small>
-                                </div>
-                            ) : (
-                                <div className='sc-signal-text-glow'>{bestSignal.signal}</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className='sc-bot-panel'>
-                <div className='sc-bot-inputs'>
-                    <div className='sc-bot-field'>
-                        <label>Stake (USD)</label>
-                        <input type='number' value={stake} onChange={e => setStake(parseFloat(e.target.value))} />
-                    </div>
-                    <div className='sc-bot-field'>
-                        <label>TP / SL</label>
-                        <div className='sc-input-group'>
-                            <input type='number' value={tp} onChange={e => setTp(parseFloat(e.target.value))} placeholder='TP' />
-                            <input type='number' value={sl} onChange={e => setSl(parseFloat(e.target.value))} placeholder='SL' />
-                        </div>
-                    </div>
-                    <div className='sc-bot-field'>
-                        <label>Ticks</label>
-                        <select value={ticks} onChange={e => setTicks(parseInt(e.target.value))}>
-                            {[1, 2, 3, 4, 5].map(t => <option key={t} value={t}>{t} Ticks</option>)}
-                        </select>
-                    </div>
-                    <div className='sc-bot-field'>
-                        <label>Bulk</label>
-                        <input type='number' value={bulkTrades} min='1' max='10' onChange={e => setBulkTrades(parseInt(e.target.value))} />
-                    </div>
-                </div>
-                <div className='sc-bot-toggles'>
-                    <button className={classNames('sc-toggle-btn', { active: compoundStake })} onClick={() => setCompoundStake(!compoundStake)}>
-                        🔄 Compounding
-                    </button>
-                    <button className={classNames('sc-toggle-btn', { active: alternateMarket })} onClick={() => setAlternateMarket(!alternateMarket)}>
-                        🔀 Recovery Mode
-                    </button>
-                    <button className={classNames('sc-toggle-btn', { active: showAdvanced })} onClick={() => setShowAdvanced(!showAdvanced)}>
-                        ⚙️ Advanced
-                    </button>
-                </div>
-
-                {showAdvanced && (
-                    <div className='sc-advanced-settings'>
-                        <div className='sc-bot-inputs'>
-                            <div className='sc-bot-field'>
-                                <label>EO Threshold %</label>
-                                <input type='number' value={evenOddThreshold} onChange={e => setEvenOddThreshold(parseInt(e.target.value))} min={1} max={50} />
-                            </div>
-                            <div className='sc-bot-field'>
-                                <label>OU Threshold %</label>
-                                <input type='number' value={overUnderThreshold} onChange={e => setOverUnderThreshold(parseInt(e.target.value))} min={1} max={50} />
-                            </div>
-                            <div className='sc-bot-field'>
-                                <label>RF Threshold %</label>
-                                <input type='number' value={riseFallThreshold} onChange={e => setRiseFallThreshold(parseInt(e.target.value))} min={1} max={50} />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {alternateMarket && (
-                    <div className='sc-recovery-panel'>
-                        <div className='sc-bot-inputs'>
-                            <div className='sc-bot-field'>
-                                <label>Switch After Losses</label>
-                                <input type='number' value={alternateAfterLosses} onChange={e => setAlternateAfterLosses(parseInt(e.target.value))} min={1} />
-                            </div>
-                            <div className='sc-bot-field'>
-                                <label>Recovery Market</label>
-                                <select value={alternateMarketSymbol} onChange={e => setAlternateMarketSymbol(e.target.value)}>
-                                    {CONTINUOUS_INDICES.map(m => <option key={m.symbol} value={m.symbol}>{m.label}</option>)}
-                                </select>
-                            </div>
-                            <div className='sc-bot-field'>
-                                <label>Recovery Strategy</label>
-                                <select value={alternateTradeType} onChange={e => setAlternateTradeType(e.target.value)}>
-                                    {TRADE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {tradeType === 'MATCHES' && (
-                    <div className='sc-matches-multi-panel'>
-                        <button 
-                            className={classNames('sc-toggle-btn', { active: useMultipleMatches })} 
-                            onClick={() => setUseMultipleMatches(!useMultipleMatches)}
-                        >
-                            🎯 Multiple Predictions
-                        </button>
-                        
-                        {useMultipleMatches && (
-                            <div className='sc-multi-fields'>
-                                <div className='sc-bot-field'>
-                                    <label>Count</label>
-                                    <input 
-                                        type='number' 
-                                        min='1' 
-                                        max='5' 
-                                        value={matchPredictions.length} 
-                                        onChange={e => {
-                                            const n = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
-                                            setMatchPredictions(prev => {
-                                                const next = [...prev];
-                                                if (n > next.length) {
-                                                    while (next.length < n) next.push(0);
-                                                } else {
-                                                    next.length = n;
-                                                }
-                                                return next;
-                                            });
-                                        }} 
-                                    />
-                                </div>
-                                <div className='sc-digit-inputs'>
-                                    {matchPredictions.map((digit, i) => (
-                                        <input
-                                            key={i}
-                                            type='number'
-                                            min='0'
-                                            max='9'
-                                            value={digit}
-                                            onChange={e => {
-                                                const val = parseInt(e.target.value) || 0;
-                                                setMatchPredictions(prev => {
-                                                    const next = [...prev];
-                                                    next[i] = val;
-                                                    return next;
-                                                });
-                                            }}
-                                            placeholder={`#${i+1}`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <button
-                    className={classNames('sc-run-btn', { running: isBotRunning })}
-                    onClick={() => setIsBotRunning(!isBotRunning)}
-                    disabled={!bestSignal && !isBotRunning}
-                >
-                    {isBotRunning ? '⛔ STOP BOT' : bestSignal ? '🚀 START BOT' : '🔍 Scan for Signal'}
-                </button>
-            </div>
-
-            <div className='sc-dashboard'>
-                <div className='sc-dashboard__tabs'>
-                    {(['SUMMARY', 'TRANSACTIONS', 'JOURNAL'] as const).map(t => (
-                        <button 
-                            key={t} 
-                            className={classNames('sc-dash-tab', { active: activeDashboardTab === t })}
-                            onClick={() => setActiveDashboardTab(t)}
-                        >
-                            {t}
-                        </button>
-                    ))}
-                </div>
-
-                <div className='sc-dashboard__content'>
-                    {activeDashboardTab === 'SUMMARY' && (
-                        <div className='sc-summary-grid'>
-                            <div className='sc-summary-item'>
-                                <label>Total Stake</label>
-                                <span>{(botWins + botLosses) * stake} {currency}</span>
-                            </div>
-                            <div className='sc-summary-item'>
-                                <label>Contracts Won</label>
-                                <span className='won'>{botWins}</span>
-                            </div>
-                            <div className='sc-summary-item'>
-                                <label>Contracts Lost</label>
-                                <span className='lost'>{botLosses}</span>
-                            </div>
-                            <div className='sc-summary-item'>
-                                <label>Total P/L</label>
-                                <span className={classNames('pl', { win: botPL > 0, loss: botPL < 0 })}>
-                                    {botPL.toFixed(2)} {currency}
-                                </span>
-                            </div>
-                            <div className='sc-summary-item'>
-                                <label>No. of Runs</label>
-                                <span>{botWins + botLosses}</span>
+                                ) : (
+                                    <div className='sc-signal-text-glow'>{bestSignal.entry}</div>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {activeDashboardTab === 'TRANSACTIONS' && (
-                        <div className='sc-table-wrapper'>
-                            <table className='sc-table'>
+                    {/* Bot Panel */}
+                    <div className='sc-card'>
+                        <div className='grid grid-cols-2 gap-6'>
+                            <div className='sc-bot-field'>
+                                <label>Stake (USD)</label>
+                                <input type='number' value={stake} onChange={e => setStake(parseFloat(e.target.value))} />
+                            </div>
+                            <div className='sc-bot-field'>
+                                <label>Goal / Stop</label>
+                                <div className='flex gap-2'>
+                                    <input type='number' value={tp} onChange={e => setTp(parseFloat(e.target.value))} placeholder='TP' />
+                                    <input type='number' value={sl} onChange={e => setSl(parseFloat(e.target.value))} placeholder='SL' />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='flex gap-4 mt-6'>
+                            <button className={classNames('flex-1 py-4 rounded-xl font-black uppercase text-sm border-2 transition-all', isScanning ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-blue-500 bg-blue-500/10 text-blue-500')} onClick={isScanning ? stopScan : runScan}>
+                                {isScanning ? 'Stop Scanning' : 'Start Scanner'}
+                            </button>
+                            <button className={classNames('flex-[2] sc-run-btn', { running: isBotRunning })} onClick={() => setIsBotRunning(!isBotRunning)} disabled={!bestSignal}>
+                                {isBotRunning ? 'Stop Trading' : 'Execute AI Strategy'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Bottom Trade Panel ── */}
+            <div className='sc-bottom-panel' style={{ '--sc-accent': TRADE_TYPES.find(t => t.id === tradeType)?.color } as any}>
+                <div className='sc-panel-tabs'>
+                    <button className={classNames({ active: activePanelTab === 'SUMMARY' })} onClick={() => setActivePanelTab('SUMMARY')}><LayoutGrid className='inline mr-2 w-4' /> Summary</button>
+                    <button className={classNames({ active: activePanelTab === 'TRANSACTIONS' })} onClick={() => setActivePanelTab('TRANSACTIONS')}><History className='inline mr-2 w-4' /> Transactions</button>
+                    <button className={classNames({ active: activePanelTab === 'JOURNAL' })} onClick={() => setActivePanelTab('JOURNAL')}><FileText className='inline mr-2 w-4' /> Journal</button>
+                </div>
+
+                <div className='sc-panel-content'>
+                    {activePanelTab === 'SUMMARY' && (
+                        <div className='sc-summary-grid'>
+                            <div className='sc-summary-item'><label>Trades</label><span>{botWins + botLosses}</span></div>
+                            <div className='sc-summary-item'><label>Result</label><span className='won'>{botWins}W <small className='text-gray-500'>/</small> {botLosses}L</span></div>
+                            <div className='sc-summary-item'><label>Total P/L</label><span className={classNames({ won: botPL > 0, lost: botPL < 0 })}>{currency} {botPL.toFixed(2)}</span></div>
+                            <div className='sc-summary-item'>
+                                <label>Win Rate</label>
+                                <span>{((botWins / (botWins + botLosses || 1)) * 100).toFixed(0)}%</span>
+                                <div className='w-full h-1 bg-gray-800 rounded-full mt-2 overflow-hidden'>
+                                    <div className='h-full bg-green-500' style={{ width: `${(botWins / (botWins + botLosses || 1)) * 100}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activePanelTab === 'TRANSACTIONS' && (
+                        <div className='sc-table-container'>
+                            <table className='sc-modern-table'>
                                 <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th>Entry/Exit Spot</th>
-                                        <th>Buy Price</th>
-                                        <th>P/L</th>
-                                    </tr>
+                                    <tr><th>Time</th><th>Market</th><th>Type</th><th>Result</th><th>Profit</th></tr>
                                 </thead>
                                 <tbody>
                                     {transactions.map(tx => (
                                         <tr key={tx.id}>
-                                            <td>{tx.type}</td>
-                                            <td>{tx.entry || '-'} / {tx.exit || '-'}</td>
-                                            <td>{tx.stake.toFixed(2)}</td>
-                                            <td className={tx.status}>{tx.profit.toFixed(2)}</td>
+                                            <td className='text-gray-500 text-xs'>{tx.time}</td>
+                                            <td>{tx.symbol}</td>
+                                            <td className='uppercase text-[10px]'>{tx.type}</td>
+                                            <td><span className={classNames('px-2 py-1 rounded text-[10px] font-black', tx.status === 'won' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500')}>{tx.status.toUpperCase()}</span></td>
+                                            <td className={classNames('font-black', tx.profit > 0 ? 'text-green-500' : 'text-red-500')}>{tx.profit.toFixed(2)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -989,38 +580,17 @@ const SignalCentreTab = observer(() => {
                         </div>
                     )}
 
-                    {activeDashboardTab === 'JOURNAL' && (
-                        <div className='sc-journal-view'>
-                            <div className='sc-table-wrapper'>
-                                <table className='sc-table sc-table--journal'>
-                                    <thead>
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Last Digit</th>
-                                            <th>Market</th>
-                                            <th>Power</th>
-                                            <th>Entry/Exit</th>
-                                            <th>Result</th>
-                                            <th>ID</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {transactions.map(tx => (
-                                            <tr key={tx.id}>
-                                                <td>{tx.time}</td>
-                                                <td><span className='sc-digit-badge'>{tx.lastDigit ?? '-'}</span></td>
-                                                <td>{tx.symbol}</td>
-                                                <td>{tx.power.toFixed(1)}%</td>
-                                                <td>{tx.entry || '-'} / {tx.exit || '-'}</td>
-                                                <td className={tx.status}>{tx.status.toUpperCase()}</td>
-                                                <td className='sc-tx-id'>{tx.id}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className='sc-log-view'>
-                                {botLog.map((log, i) => <div key={i} className='sc-log-line'>{log}</div>)}
+                    {activePanelTab === 'JOURNAL' && (
+                        <div className='flex flex-col gap-4'>
+                            <textarea 
+                                className='sc-journal-area' 
+                                placeholder='Type your trading notes here...'
+                                value={journalNote}
+                                onChange={e => setJournalNote(e.target.value)}
+                            />
+                            <div className='flex justify-between items-center'>
+                                <span className='text-[10px] text-gray-500 uppercase font-black'>Entries are saved locally</span>
+                                <button className='sc-save-btn flex items-center gap-2'><Save size={16} /> Save Entry</button>
                             </div>
                         </div>
                     )}
