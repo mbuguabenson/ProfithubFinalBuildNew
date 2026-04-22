@@ -853,15 +853,24 @@
     }
 }
 
-.sc-recovery-panel {
-    background: rgba(245, 158, 11, 0.05);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+.sc-recovery-panel, .sc-advanced-settings {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--sc-border);
     border-radius: 12px;
     padding: 16px;
     animation: sc-slide-in 0.3s ease-out;
-    
+}
+
+.sc-recovery-panel {
+    background: rgba(245, 158, 11, 0.05);
+    border-color: rgba(245, 158, 11, 0.2);
     label { color: var(--sc-amber); }
-    input, select { border-color: rgba(245, 158, 11, 0.3); }
+}
+
+.sc-advanced-settings {
+    background: rgba(99, 102, 241, 0.05);
+    border-color: rgba(99, 102, 241, 0.2);
+    label { color: var(--sc-indigo); }
 }
 
 .sc-journal-view {

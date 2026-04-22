@@ -53,7 +53,13 @@ interface MarketAnalysis {
     score: number;
 }
 
-function analyseMarket(symbol: string, label: string, digits: number[], tradeType: string): MarketAnalysis {
+function analyseMarket(
+    symbol: string, 
+    label: string, 
+    digits: number[], 
+    tradeType: string,
+    thresholds: { eo: number, ou: number, rf: number } = { eo: 7, ou: 7, rf: 8 }
+): MarketAnalysis {
     const last = digits.slice(-120);
     const total = last.length || 1;
 
@@ -100,7 +106,7 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
             const dom = evenPct > oddPct ? 'EVEN' : 'ODD';
             deviation = Math.abs(evenPct - oddPct);
             score = Math.min(deviation * 3, 100);
-            if (deviation >= 7) {
+            if (deviation >= thresholds.eo) {
                 signal = dom === 'EVEN' ? 'BUY EVEN' : 'BUY ODD';
                 entry = dom;
             }
@@ -110,7 +116,7 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
             const dom = overPct > underPct ? 'OVER' : 'UNDER';
             deviation = Math.abs(overPct - underPct);
             score = Math.min(deviation * 3, 100);
-            if (deviation >= 7) {
+            if (deviation >= thresholds.ou) {
                 signal = dom === 'OVER' ? 'BUY OVER' : 'BUY UNDER';
                 entry = dom;
                 
@@ -128,7 +134,7 @@ function analyseMarket(symbol: string, label: string, digits: number[], tradeTyp
             const dom = risePct > fallPct ? 'RISE' : 'FALL';
             deviation = Math.abs(risePct - fallPct);
             score = Math.min(deviation * 2.5, 100);
-            if (deviation >= 8) {
+            if (deviation >= thresholds.rf) {
                 signal = dom === 'RISE' ? 'BUY RISE' : 'BUY FALL';
                 entry = dom;
             }
@@ -231,6 +237,10 @@ const SignalCentreTab = observer(() => {
     const [useMultipleMatches, setUseMultipleMatches] = useState(false);
     const [matchPredictions, setMatchPredictions] = useState<number[]>([0]);
     const [manualPrediction, setManualPrediction] = useState<number | null>(null);
+    const [evenOddThreshold, setEvenOddThreshold] = useState(7);
+    const [overUnderThreshold, setOverUnderThreshold] = useState(7);
+    const [riseFallThreshold, setRiseFallThreshold] = useState(8);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
 
     const subsRef = useRef<Map<string, () => void>>(new Map());
@@ -333,7 +343,11 @@ const SignalCentreTab = observer(() => {
             setScanningIndex(i);
             const digits = await subscribeSymbol(symbol);
             if (digits.length >= 20) {
-                const analysis = analyseMarket(symbol, label, digits, tradeType);
+                const analysis = analyseMarket(symbol, label, digits, tradeType, {
+                    eo: evenOddThreshold,
+                    ou: overUnderThreshold,
+                    rf: riseFallThreshold
+                });
                 results.push(analysis);
                 setAnalyses([...results]);
             }
@@ -789,7 +803,29 @@ const SignalCentreTab = observer(() => {
                     <button className={classNames('sc-toggle-btn', { active: alternateMarket })} onClick={() => setAlternateMarket(!alternateMarket)}>
                         🔀 Recovery Mode
                     </button>
+                    <button className={classNames('sc-toggle-btn', { active: showAdvanced })} onClick={() => setShowAdvanced(!showAdvanced)}>
+                        ⚙️ Advanced
+                    </button>
                 </div>
+
+                {showAdvanced && (
+                    <div className='sc-advanced-settings'>
+                        <div className='sc-bot-inputs'>
+                            <div className='sc-bot-field'>
+                                <label>EO Threshold %</label>
+                                <input type='number' value={evenOddThreshold} onChange={e => setEvenOddThreshold(parseInt(e.target.value))} min={1} max={50} />
+                            </div>
+                            <div className='sc-bot-field'>
+                                <label>OU Threshold %</label>
+                                <input type='number' value={overUnderThreshold} onChange={e => setOverUnderThreshold(parseInt(e.target.value))} min={1} max={50} />
+                            </div>
+                            <div className='sc-bot-field'>
+                                <label>RF Threshold %</label>
+                                <input type='number' value={riseFallThreshold} onChange={e => setRiseFallThreshold(parseInt(e.target.value))} min={1} max={50} />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {alternateMarket && (
                     <div className='sc-recovery-panel'>
