@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import Button from '@/components/shared_ui/button';
 import Modal from '@/components/shared_ui/modal';
@@ -15,7 +15,7 @@ const RiskDisclaimerModal = observer(({ is_open, onClose, force_show }: RiskDisc
     const [is_visible, setIsVisible] = useState(false);
 
     const checkAcceptance = useCallback(() => {
-        const accepted = localStorage.getItem('profithub_risk_accepted');
+        const accepted = localStorage.getItem('experttrader_risk_accepted');
         if (!accepted || force_show) {
             setIsVisible(true);
         } else {
@@ -28,7 +28,7 @@ const RiskDisclaimerModal = observer(({ is_open, onClose, force_show }: RiskDisc
 
         // Listen for storage changes in case it's accepted in another tab
         const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'profithub_risk_accepted' && e.newValue === 'true') {
+            if (e.key === 'experttrader_risk_accepted' && e.newValue === 'true') {
                 setIsVisible(false);
             }
         };
@@ -43,7 +43,7 @@ const RiskDisclaimerModal = observer(({ is_open, onClose, force_show }: RiskDisc
     }, [is_open]);
 
     const onAccept = () => {
-        localStorage.setItem('profithub_risk_accepted', 'true');
+        localStorage.setItem('experttrader_risk_accepted', 'true');
         setIsVisible(false);
         if (onClose) onClose();
     };

@@ -1,5 +1,6 @@
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import AnalysisStore from './analysis-store';
+import OverUnderStore from './over-under-store';
 import AppStore from './app-store';
 import AutoTraderStore from './auto-trader-store';
 import BlocklyStore from './blockly-store';
@@ -55,6 +56,7 @@ export default class RootStore {
     public digit_cracker: DigitCrackerStore;
     public free_bots: FreeBotsStore;
     public marketkiller: MarketkillerStore;
+    public over_under: OverUnderStore;
 
     public chart_store: ChartStore;
     public blockly_store: BlocklyStore;
@@ -107,6 +109,7 @@ export default class RootStore {
         this.digit_cracker = new DigitCrackerStore(this);
         this.free_bots = new FreeBotsStore(this);
         this.marketkiller = new MarketkillerStore(this);
+        this.over_under = new OverUnderStore(this);
 
         // need to be at last for dependency
         this.chart_store = new ChartStore(this);

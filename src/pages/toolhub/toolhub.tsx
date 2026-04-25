@@ -1,4 +1,3 @@
-import React from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { Localize } from '@deriv-com/translations';
@@ -10,12 +9,19 @@ const Toolhub = observer(() => {
     const { dashboard } = useStore();
     const { toolhub_selected_tool, setToolhubSelectedTool } = dashboard;
 
-    const tools = {
+    type TTools = {
+        [key: string]: {
+            name: string;
+            url: string;
+        };
+    };
+
+    const tools: TTools = {
         dtool: {
             name: 'Dtool',
             url: 'https://v0-tool2.vercel.app/',
         },
-        profithub: {
+        expert_analytics: {
             name: 'Profithub Tool',
             url: 'https://v0-profithubtool2026.vercel.app/',
         },
@@ -33,11 +39,11 @@ const Toolhub = observer(() => {
                         <Localize i18n_default_text='Dtool' />
                     </button>
                     <button
-                        className={classNames('tool-btn', { active: toolhub_selected_tool === 'profithub' })}
-                        onClick={() => setToolhubSelectedTool('profithub')}
+                        className={classNames('tool-btn', { active: toolhub_selected_tool === 'expert_analytics' })}
+                        onClick={() => setToolhubSelectedTool('expert_analytics')}
                     >
                         <StandaloneChartAreaRegularIcon className='btn-icon' />
-                        <Localize i18n_default_text='Profithub Tool' />
+                        <Localize i18n_default_text='Expert Analytics' />
                     </button>
                 </div>
                 <div className='toolhub-status'>

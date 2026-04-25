@@ -98,6 +98,8 @@ export default class MarketkillerStore {
         least: null as number | null,
     };
 
+    @observable accessor is_executing = false;
+
     private tick_subscription: any = null;
     private recent_powers: number[][] = [];
     private ribbon_subscriptions: Map<string, any> = new Map();
@@ -338,7 +340,7 @@ export default class MarketkillerStore {
 
             this.updateDigitAnalytics();
 
-            if (this.is_running) {
+            if (this.is_running && !this.is_executing) {
                 this.evaluateLogicEngine();
             }
         });
@@ -529,8 +531,11 @@ export default class MarketkillerStore {
                 setTimeout(() => runInAction(() => { this.signal_detected = false; }), 2000);
             });
 
-            // Halt engine to prevent overlapping bursts (Standard safety)
-            this.is_running = false;
+            // If NOT in auto-mode, shut down engine after one burst. 
+            // In AUTO-MODE, we keep it running but rely on is_executing to prevent overlaps.
+            if (!this.matches_settings.is_auto) {
+                this.is_running = false;
+            }
         }
     };
 
@@ -545,6 +550,8 @@ export default class MarketkillerStore {
     @action
     private executeConcurrentTrades = async (tradeConfigs: any[]) => {
         if (tradeConfigs.length === 0) return;
+        runInAction(() => { this.is_executing = true; });
+
         console.log(`[Marketkiller] ⚡ Atomic burst: ${tradeConfigs.length} trade(s) — digits:`, tradeConfigs.map(c => c.barrier));
 
         // ── ZERO-GAP SYNCHRONOUS FIRE ─────────────────────────────────────────
@@ -654,6 +661,12 @@ export default class MarketkillerStore {
                 console.warn(`[Marketkiller] POC subscribe failed for ${contractId}:`, e?.error?.message || e);
             });
         });
+
+        // Release execution lock after trades are initiated and settled (or timeout)
+        // We wait a small buffer to ensure the socket isn't flooded and ticks have progressed.
+        setTimeout(() => {
+            runInAction(() => { this.is_executing = false; });
+        }, 1500);
     };
 
     @action

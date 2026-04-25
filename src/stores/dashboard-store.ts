@@ -61,6 +61,10 @@ export interface IDashboardStore {
     is_chart_modal_visible: boolean;
     is_trading_view_modal_visible: boolean;
     setPreviewOnPopup: (is_preview_on_popup: boolean) => void;
+    is_expert_analytics_visible: boolean;
+    setIsExpertAnalyticsVisible: (visibility: boolean) => void;
+    toolhub_selected_tool: string;
+    setToolhubSelectedTool: (tool: string) => void;
 }
 
 export default class DashboardStore implements IDashboardStore {
@@ -120,6 +124,10 @@ export default class DashboardStore implements IDashboardStore {
             setShowMobileTourDialog: action.bound,
             is_trading_view_modal_visible: observable,
             bot_builder_symbol: observable,
+            is_expert_analytics_visible: observable,
+            toolhub_selected_tool: observable,
+            setIsExpertAnalyticsVisible: action.bound,
+            setToolhubSelectedTool: action.bound,
         });
         this.root_store = root_store;
         this.core = core;
@@ -205,6 +213,16 @@ export default class DashboardStore implements IDashboardStore {
     is_chart_modal_visible = false;
     is_trading_view_modal_visible = false;
     faq_title = '';
+    is_expert_analytics_visible = false;
+    toolhub_selected_tool = 'expert_analytics';
+
+    setIsExpertAnalyticsVisible = (visibility: boolean) => {
+        this.is_expert_analytics_visible = visibility;
+    };
+
+    setToolhubSelectedTool = (tool: string) => {
+        this.toolhub_selected_tool = tool;
+    };
 
     setFaqTitle = (faq_title: string) => {
         this.faq_title = faq_title;

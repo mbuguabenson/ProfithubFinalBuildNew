@@ -4,99 +4,133 @@ import TechBackground from '../shared_ui/tech-background/tech-background';
 import './initial-loader.scss';
 
 const LOADING_MESSAGES = [
-    'Initializing Profithub Engine...',
-    'Securing Quantum Gateway...',
-    'Connecting to Global Markets...',
-    'Calibrating Trading Algorithms...',
-    'Decrypting Secure Session...',
+    'ESTABLISHING QUANTUM LINK',
+    'SYNCING LIQUIDITY MATRIX',
+    'DECRYPTING MARKET DATA',
+    'CALIBRATING AI ENGINES',
+    'PROFIT-MAXIMIZATION ACTIVE',
 ];
+
+const DATA_STREAMS = Array.from({ length: 15 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    duration: 5 + Math.random() * 10,
+    delay: Math.random() * 5,
+}));
 
 export default function InitialLoader() {
     const [messageIndex, setMessageIndex] = useState(0);
+    const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        const interval = setInterval(() => {
+        const msgInterval = setInterval(() => {
             setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
-        }, 3000);
-        return () => clearInterval(interval);
+        }, 2500);
+
+        const progInterval = setInterval(() => {
+            setProgress(prev => (prev < 100 ? prev + 1 : 100));
+        }, 150);
+
+        return () => {
+            clearInterval(msgInterval);
+            clearInterval(progInterval);
+        };
     }, []);
 
     const whatsappNumber = '+254796428848';
     const whatsappLink = `https://wa.me/${whatsappNumber.replace('+', '')}`;
 
     return (
-        <div className='initial-loader-overlay'>
+        <div className='quantum-hud-overlay'>
             <TechBackground />
-            <div className='loader-background-glow' />
-
-            <motion.div
-                className='loader-content-wrap'
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            >
-                <div className='logo-section'>
+            
+            {/* Binary Data Streams */}
+            <div className='data-stream-layer'>
+                {DATA_STREAMS.map(stream => (
                     <motion.div
-                        className='logo-glow-ring'
+                        key={stream.id}
+                        className='binary-column'
+                        style={{ left: stream.left }}
+                        initial={{ y: '-100%' }}
+                        animate={{ y: '200%' }}
+                        transition={{
+                            duration: stream.duration,
+                            repeat: Infinity,
+                            ease: 'linear',
+                            delay: stream.delay,
+                        }}
+                    >
+                        {Array.from({ length: 20 }).map((_, j) => (
+                            <span key={j}>{Math.round(Math.random())}</span>
+                        ))}
+                    </motion.div>
+                ))}
+            </div>
+
+            <div className='hud-main-container'>
+                {/* HUD Corners */}
+                <div className='hud-corner top-left' />
+                <div className='hud-corner top-right' />
+                <div className='hud-corner bottom-left' />
+                <div className='hud-corner bottom-right' />
+
+                <div className='hologram-hub'>
+                    {/* Rotating Rings */}
+                    <motion.div 
+                        className='ring-outer'
                         animate={{ rotate: 360 }}
+                        transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <motion.div 
+                        className='ring-inner'
+                        animate={{ rotate: -360 }}
                         transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
                     />
-                    <div className='logo-container'>
-                        <img src='/logo-ph.png' alt='Ph' className='main-logo-img' />
-                        <h1 className='main-brand-title'>PROFITHUB</h1>
+                    
+                    <div className='hologram-core'>
+                        <div className='brand-display'>
+                            <span className='p-logo'>P</span>
+                            <div className='text-wrap'>
+                                <span className='main'>PROFITHUB</span>
+                                <span className='sub'>TRADERS</span>
+                            </div>
+                        </div>
+                        <div className='progress-percentage'>{progress}%</div>
                     </div>
                 </div>
 
-                <div className='system-status-container'>
-                    <div className='status-header'>
-                        <span className='pulse-dot' />
-                        <span className='status-label'>SYSTEM INITIALIZATION</span>
-                    </div>
-
-                    <div className='progress-meter'>
-                        <motion.div
-                            className='progress-fill'
-                            initial={{ width: '0%' }}
-                            animate={{ width: '100%' }}
-                            transition={{ duration: 15, ease: 'linear' }}
-                        />
-                    </div>
-
-                    <div className='message-carousel'>
-                        {/* @ts-ignore */}
-                        <AnimatePresence mode='wait'>
-                            <motion.p
+                <div className='hud-footer'>
+                    <div className='status-line'>
+                        <span className='label'>SYSTEM STATUS:</span>
+                        <AnimatePresence exitBeforeEnter>
+                            <motion.span
                                 key={messageIndex}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.5 }}
-                                className='loading-status-msg'
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className='value'
                             >
                                 {LOADING_MESSAGES[messageIndex]}
-                            </motion.p>
+                            </motion.span>
                         </AnimatePresence>
                     </div>
+
+                    <div className='loading-bar-wrap'>
+                        <div className='loading-bar-fill' style={{ width: `${progress}%` }} />
+                    </div>
+
+                    <div className='support-hud-cta'>
+                        <a href={whatsappLink} target='_blank' rel='noopener noreferrer'>
+                            <span className='icon'>⚡</span>
+                            <span>SECURE SUPPORT: {whatsappNumber}</span>
+                        </a>
+                    </div>
                 </div>
+            </div>
 
-                <motion.div
-                    className='customer-care-cta'
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1, duration: 0.8 }}
-                >
-                    <a href={whatsappLink} target='_blank' rel='noopener noreferrer' className='whatsapp-support-btn'>
-                        <span className='wa-icon'>💬</span>
-                        <div className='wa-text'>
-                            <span className='wa-label'>CUSTOMER CARE</span>
-                            <span className='wa-number'>{whatsappNumber}</span>
-                        </div>
-                    </a>
-                </motion.div>
-            </motion.div>
-
-            <div className='loader-footer-simple'>
-                <span className='powered-tag'>POWERED BY DERIV TECHNOLOGY</span>
+            <div className='quantum-footer'>
+                <span className='engine-id'>CORE-v4.0.2-STABLE</span>
+                <span className='tech-stack'>POWERED BY DERIV TECHNOLOGY</span>
             </div>
         </div>
     );

@@ -42,6 +42,7 @@ const SmartAuto24 = lazy(() => import('../circles-analysis/index'));
 const DigitCracker = lazy(() => import('../digit-cracker/index'));
 const SignalCentrePage = lazy(() => import('../smart-trading/components/signal-centre-tab'));
 const Marketkiller = lazy(() => import('../marketkiller'));
+const OverUnderTab = lazy(() => import('../over-under'));
 // const DTrader = lazy(() => import('../dtrader/index')); // Removed as per request
 
 const AppWrapper = observer(() => {
@@ -78,6 +79,7 @@ const AppWrapper = observer(() => {
         'pro_tool',
         'smart_auto',
         'marketkiller',
+        'over_under',
     ];
     const { isDesktop } = useDevice();
     const location = useLocation();
@@ -469,6 +471,26 @@ const AppWrapper = observer(() => {
                                 <PageContentWrapper>
                                     <Suspense fallback={<ChunkLoader message={localize('Loading Marketkiller...')} />}>
                                         <Marketkiller />
+                                    </Suspense>
+                                </PageContentWrapper>
+                            </div>
+
+                            <div
+                                label={
+                                    <div className='main__tabs-label'>
+                                        <LabelPairedLightbulbCaptionRegularIcon
+                                            height='20px'
+                                            width='20px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Over/Under Analysis' />
+                                    </div>
+                                }
+                                id='id-over-under'
+                            >
+                                <PageContentWrapper>
+                                    <Suspense fallback={<ChunkLoader message={localize('Loading Over/Under Analysis...')} />}>
+                                        <OverUnderTab />
                                     </Suspense>
                                 </PageContentWrapper>
                             </div>

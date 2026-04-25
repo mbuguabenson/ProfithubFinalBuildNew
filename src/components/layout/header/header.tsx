@@ -20,6 +20,7 @@ import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
+import OnlineActivity from './OnlineActivity';
 import './header.scss';
 
 type TAppHeaderProps = {
@@ -209,6 +210,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                 >
                     <LegacyWhatsappIcon className='app-header__whatsapp-icon' />
                 </a>
+                <OnlineActivity />
                 {!isDesktop && <PWAInstallButton variant='primary' size='medium' />}
                 {renderAccountSection()}
             </Wrapper>
