@@ -96,7 +96,7 @@ const MatchesKiller = observer(() => {
             <div className='max-w-7xl'>
 
                 {/* 1. Massive Digital Header Card */}
-                <div className='mkill-hero-card'>
+                <div className={classNames('mkill-hero-card', { 'signal-glow': marketkiller.signal_detected })}>
                     <div className='hero-glow-1'></div>
                     <div className='hero-glow-2'></div>
 

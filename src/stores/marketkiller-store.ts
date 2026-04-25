@@ -56,6 +56,7 @@ export default class MarketkillerStore {
     @observable accessor signal_strategy = 'OVER_4';
     @observable accessor use_signals = false;
     @observable accessor entry_point_enabled = false;
+    @observable accessor signal_detected = false;
 
     // --- ONETRADER (HEDGING) SETTINGS ---
     @observable accessor onetrader_settings = {
@@ -100,6 +101,75 @@ export default class MarketkillerStore {
     private tick_subscription: any = null;
     private recent_powers: number[][] = [];
     private ribbon_subscriptions: Map<string, any> = new Map();
+
+    // ── Rate-Limit Guard ──────────────────────────────────────────────────────
+    // directBuy fires all trades in parallel (no proposal subscription limit).
+    private readonly MAX_RETRIES = 3;
+
+    /** Wait helper */
+    private sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    /** Extract a clean error string from whatever Deriv throws */
+    private extractErrorMsg = (e: any): string => {
+        if (!e) return 'Unknown error';
+        // Deriv rejects with { error: { code, message } }
+        if (e?.error?.message) return `[${e.error.code}] ${e.error.message}`;
+        if (e?.message) return e.message;
+        try { return JSON.stringify(e); } catch { return String(e); }
+    };
+
+    /**
+     * Direct Buy — uses Deriv's buy: "1" with inline parameters.
+     * This skips the proposal step entirely, eliminating the InvalidContractProposal
+     * race condition where 1-tick proposals expire between propose and buy.
+     * One API call per trade = half the rate-limit cost + no expiry window.
+     */
+    private directBuy = async (config: any, attempt = 0): Promise<any> => {
+        const safeStake = Number(Math.max(config.stake || 0.35, 0.35).toFixed(2));
+
+        let buyRes: any;
+        try {
+            buyRes = await api_base.api.send({
+                buy: '1',
+                price: safeStake,
+                parameters: {
+                    amount: safeStake,
+                    basis: 'stake',
+                    contract_type: config.type,
+                    currency: 'USD',
+                    duration: this.matches_settings.duration || 1,
+                    duration_unit: 't',
+                    symbol: config.symbol,
+                    barrier: String(config.barrier),
+                },
+            });
+        } catch (e: any) {
+            const msg = this.extractErrorMsg(e);
+            const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('ratelimit') || msg.toLowerCase().includes('rate limit');
+            if (isRateLimit && attempt < this.MAX_RETRIES) {
+                const backoff = (attempt + 1) * 700;
+                console.warn(`[Marketkiller] Buy rate-limited for digit ${config.barrier}. Retrying in ${backoff}ms`);
+                await this.sleep(backoff);
+                return this.directBuy(config, attempt + 1);
+            }
+            console.error(`[Marketkiller] Buy exception for digit ${config.barrier}:`, msg);
+            return null;
+        }
+
+        if (buyRes?.error) {
+            const { code, message } = buyRes.error;
+            if (code === 'RateLimit' && attempt < this.MAX_RETRIES) {
+                const backoff = (attempt + 1) * 700;
+                console.warn(`[Marketkiller] Buy RateLimit for digit ${config.barrier}. Retrying in ${backoff}ms`);
+                await this.sleep(backoff);
+                return this.directBuy(config, attempt + 1);
+            }
+            console.error(`[Marketkiller] Buy rejected for digit ${config.barrier}: [${code}] ${message}`);
+            return null;
+        }
+
+        return buyRes;
+    };
 
     constructor(root_store: RootStore) {
         makeObservable(this);
@@ -368,6 +438,10 @@ export default class MarketkillerStore {
         });
 
         this.executeConcurrentTrades(tradesToExecute);
+        runInAction(() => {
+            this.signal_detected = true;
+            setTimeout(() => runInAction(() => { this.signal_detected = false; }), 2000);
+        });
         // Halt to prevent rapid-fire while evaluating execution resolution
         this.is_running = false;
     };
@@ -450,6 +524,11 @@ export default class MarketkillerStore {
             console.log(`[Marketkiller] Placing ${trades.length} simultaneous trades for digits:`, valid_targets);
             this.executeConcurrentTrades(trades);
             
+            runInAction(() => {
+                this.signal_detected = true;
+                setTimeout(() => runInAction(() => { this.signal_detected = false; }), 2000);
+            });
+
             // Halt engine to prevent overlapping bursts (Standard safety)
             this.is_running = false;
         }
@@ -465,99 +544,116 @@ export default class MarketkillerStore {
 
     @action
     private executeConcurrentTrades = async (tradeConfigs: any[]) => {
-        try {
-            console.log('[Marketkiller] Executing rapid-sequential trades:', tradeConfigs);
-            
-            // 1. Rapid sequential proposals (Bypasses parallel rate-limiting)
-            const propResponses: any[] = [];
-            for (const config of tradeConfigs) {
-                try {
-                    const safeStake = Math.max(config.stake || 0.35, 0.35);
-                    const res = await api_base.api.send({
-                        proposal: 1,
-                        amount: safeStake,
-                        basis: 'stake',
-                        contract_type: config.type,
-                        currency: 'USD',
-                        duration: this.matches_settings.duration || 1,
-                        duration_unit: 't',
-                        symbol: config.symbol,
-                        barrier: String(config.barrier),
-                    });
-                    if (!res.error) propResponses.push({ res, config });
-                } catch (e: any) {
-                    console.error('[Marketkiller] Proposal Exception:', e);
+        if (tradeConfigs.length === 0) return;
+        console.log(`[Marketkiller] ⚡ Atomic burst: ${tradeConfigs.length} trade(s) — digits:`, tradeConfigs.map(c => c.barrier));
+
+        // ── ZERO-GAP SYNCHRONOUS FIRE ─────────────────────────────────────────
+        // All api.send() calls are started in a plain synchronous .map() loop
+        // — NO await between them. Every WebSocket message is queued in the
+        // SAME JavaScript event loop tick before any suspension occurs.
+        // This gives the absolute minimum gap between sends and guarantees all
+        // contracts open on the same entry tick → same entry AND exit spot.
+        const sendPromises: Promise<any>[] = tradeConfigs.map(config => {
+            const safeStake = Number(Math.max(config.stake || 0.35, 0.35).toFixed(2));
+            return api_base.api.send({
+                buy: '1',
+                price: safeStake,
+                parameters: {
+                    amount: safeStake,
+                    basis: 'stake',
+                    contract_type: config.type,
+                    currency: 'USD',
+                    duration: this.matches_settings.duration || 1,
+                    duration_unit: 't',
+                    symbol: config.symbol,
+                    barrier: String(config.barrier),
+                },
+            });
+        });
+
+        // Await all responses together.
+        const results = await Promise.allSettled(sendPromises);
+
+        const successfulTrades: Array<{ trade: any; config: any }> = [];
+        results.forEach((result, i) => {
+            if (result.status === 'fulfilled') {
+                const trade = result.value;
+                if (trade?.error) {
+                    const { code, message } = trade.error;
+                    console.error(`[Marketkiller] ❌ Digit ${tradeConfigs[i]?.barrier} rejected: [${code}] ${message}`);
+                    return;
                 }
-            }
-
-            // 2. Rapid sequential buys (Guarantees same entry tick without API rejection)
-            const successfulTrades: any[] = [];
-            for (const item of propResponses) {
-                try {
-                    const trade = await api_base.api.send({
-                        buy: item.res.proposal.id,
-                        price: item.res.proposal.ask_price,
-                    });
-                    if (!trade.error) {
-                        successfulTrades.push({ trade, config: item.config });
-                    }
-                } catch (e: any) {
-                    console.error('[Marketkiller] Buy Exception:', e);
+                if (!trade?.buy?.contract_id) {
+                    console.warn(`[Marketkiller] ❌ Digit ${tradeConfigs[i]?.barrier}: no contract_id`, trade);
+                    return;
                 }
+                console.log(`[Marketkiller] ✅ Digit ${tradeConfigs[i]?.barrier} confirmed | Contract ${trade.buy.contract_id}`);
+                successfulTrades.push({ trade, config: tradeConfigs[i] });
+            } else {
+                const msg = this.extractErrorMsg(result.reason);
+                console.error(`[Marketkiller] ❌ Digit ${tradeConfigs[i]?.barrier} exception: ${msg}`);
             }
+        });
 
-            // Track outcomes and journal
-            successfulTrades.forEach(({ trade, config }: { trade: any; config: any }) => {
-                runInAction(() => {
-                    this.total_stake_used += config.stake;
-                    this.total_runs++;
-                    this.trades_journal.unshift({
-                        id: trade.buy.contract_id,
-                        market: config.symbol,
-                        type: config.type,
-                        prediction: config.barrier,
-                        stake: config.stake,
-                        time: new Date().toLocaleTimeString(),
-                        status: 'PENDING'
-                    });
-                });
+        console.log(`[Marketkiller] Burst complete: ${successfulTrades.length}/${tradeConfigs.length} confirmed on same tick.`);
 
-                // Pseudo-hook: Wait for contract completion
-                api_base.api.onMessage().subscribe((res: any) => {
-                    if (
-                        res.data.msg_type === 'proposal_open_contract' &&
-                        res.data.proposal_open_contract.contract_id === trade.buy.contract_id &&
-                        res.data.proposal_open_contract.is_sold
-                    ) {
-                        const poc = res.data.proposal_open_contract;
-                        const isWin = poc.status === 'won';
-                        const profit = poc.profit;
-                        
-                        runInAction(() => {
-                            if (isWin) {
-                                this.wins++;
-                                this.consecutive_losses = 0;
-                            } else {
-                                this.losses++;
-                                this.consecutive_losses++;
-                            }
-                            this.session_pl += profit;
+        // ── Journal & Settlement Tracking ─────────────────────────────────────
+        successfulTrades.forEach(({ trade, config }) => {
+            const contractId = trade.buy.contract_id;
 
-                            // Update journal entry
-                            const jIdx = this.trades_journal.findIndex(j => j.id === trade.buy.contract_id);
-                            if (jIdx !== -1) {
-                                this.trades_journal[jIdx].status = poc.status.toUpperCase();
-                                this.trades_journal[jIdx].exit = poc.exit_tick;
-                                this.trades_journal[jIdx].entry = poc.entry_tick;
-                                this.trades_journal[jIdx].profit = profit;
-                            }
-                        });
-                    }
+            runInAction(() => {
+                this.total_stake_used += config.stake;
+                this.total_runs++;
+                this.trades_journal.unshift({
+                    id: contractId,
+                    market: config.symbol,
+                    type: config.type,
+                    prediction: config.barrier,
+                    stake: config.stake,
+                    time: new Date().toLocaleTimeString(),
+                    entry: trade.buy?.entry_spot_display_value ?? undefined,
+                    exit: undefined,
+                    status: 'PENDING',
                 });
             });
-        } catch (error) {
-            console.error('Marketkiller Trade execution failed:', error);
-        }
+
+            const sub = api_base.api.onMessage().subscribe((res: any) => {
+                const poc = res?.data?.proposal_open_contract;
+                if (
+                    res?.data?.msg_type === 'proposal_open_contract' &&
+                    poc?.contract_id === contractId &&
+                    poc?.is_sold
+                ) {
+                    runInAction(() => {
+                        if (poc.status === 'won') {
+                            this.wins++;
+                            this.consecutive_losses = 0;
+                        } else {
+                            this.losses++;
+                            this.consecutive_losses++;
+                        }
+                        this.session_pl += poc.profit;
+
+                        const jIdx = this.trades_journal.findIndex(j => j.id === contractId);
+                        if (jIdx !== -1) {
+                            this.trades_journal[jIdx].status = poc.status.toUpperCase();
+                            this.trades_journal[jIdx].exit   = poc.exit_tick_display_value  ?? poc.exit_tick;
+                            this.trades_journal[jIdx].entry  = poc.entry_tick_display_value ?? poc.entry_tick;
+                            this.trades_journal[jIdx].profit = poc.profit;
+                        }
+                    });
+                    try { sub.unsubscribe(); } catch (_) { /* ignore */ }
+                }
+            });
+
+            api_base.api.send({
+                proposal_open_contract: 1,
+                contract_id: contractId,
+                subscribe: 1,
+            }).catch((e: any) => {
+                console.warn(`[Marketkiller] POC subscribe failed for ${contractId}:`, e?.error?.message || e);
+            });
+        });
     };
 
     @action

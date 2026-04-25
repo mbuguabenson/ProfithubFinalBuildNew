@@ -38,7 +38,7 @@ const Onetrader = observer(() => {
             <div className='onetrader-grid'>
                 <div className='analytics-column'>
                     {/* 2. Digit Reactor Grid */}
-                    <div className='mk-glass-card reactors-section'>
+                    <div className={classNames('mk-glass-card reactors-section', { 'signal-glow': marketkiller.signal_detected })}>
                         <div className='section-header'>
                             <h3>DIGIT DISTRIBUTION REACTOR</h3>
                             <div className='signal-status'>
@@ -123,7 +123,7 @@ const Onetrader = observer(() => {
 
                 <div className='config-column'>
                     {/* 4. Signal Control Center */}
-                    <div className='mk-glass-card signal-card'>
+                    <div className={classNames('mk-glass-card signal-card', { 'signal-glow': marketkiller.signal_detected })}>
                         <div className='card-top'>
                             <h3>SIGNAL RADAR</h3>
                             <div
