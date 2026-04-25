@@ -44,8 +44,7 @@ export default class OverUnderStore {
     @observable accessor phase: 1 | 2 = 1;
     @observable accessor phase2_ticks: number = 0;
     @observable accessor last_confidence: number = 0;
-
-    private tick_subscription: any = null;
+    private _tick_sub: any = null;
 
     constructor(root_store: RootStore) {
         makeObservable(this);
@@ -89,59 +88,67 @@ export default class OverUnderStore {
 
     @action
     private subscribeToTicks() {
-        if (!api_base.api || this.tick_subscription) return;
+        if (!api_base.api) return;
 
-        this.tick_subscription = api_base.api.onMessage().subscribe((msg: any) => {
-            if (msg.msg_type === 'tick' && msg.tick.symbol === this.symbol) {
-                const tick = msg.tick;
-                const quote = tick.quote.toString();
-                const digit = parseInt(quote.slice(-1));
-                
-                runInAction(() => {
-                    this.current_price = tick.quote.toFixed(tick.pip_size || 2);
-                    this.recent_digits = [...this.recent_digits, digit].slice(-100);
-                    this.confirmed_ticks++;
+        // Unsubscribe from previous if exists
+        if (this._tick_sub) {
+            this._tick_sub.unsubscribe();
+            this._tick_sub = null;
+        }
+
+        // Wait for clean slate before subscribing
+        api_base.api.send({ forget_all: 'ticks' }).then(() => {
+            this._tick_sub = api_base.api.onMessage().subscribe((msg: any) => {
+                if (msg.error) {
+                    if (msg.error.code === 'AlreadySubscribed') return;
+                    console.error('OverUnderStore Error:', msg.error.message);
+                    return;
+                }
+
+                if (msg.msg_type === 'tick' && msg.tick.symbol === this.symbol) {
+                    const tick = msg.tick;
+                    const quote = tick.quote.toString();
+                    const digit = parseInt(quote.slice(-1));
                     
-                    if (this.phase === 2) {
-                        this.phase2_ticks++;
-                        if (this.phase2_ticks >= 20) { // Max 20 ticks to trade
-                            this.phase = 1;
-                            this.phase2_ticks = 0;
-                        }
-                    } else {
-                        // Check for transition to Phase 2
-                        if (this.analysis.marketPower >= 53) {
+                    runInAction(() => {
+                        this.current_price = tick.quote.toFixed(tick.pip_size || 2);
+                        this.recent_digits = [...this.recent_digits, digit].slice(-100);
+                        this.confirmed_ticks++;
+                        
+                        if (this.phase === 2) {
+                            this.phase2_ticks++;
+                            if (this.phase2_ticks >= 20) {
+                                this.phase = 1;
+                                this.phase2_ticks = 0;
+                            }
+                        } else if (this.analysis.marketPower >= 53) {
                             this.phase = 2;
                             this.phase2_ticks = 0;
                         }
-                    }
+                        this.last_confidence = this.confidence.maxPercent;
+                    });
+                }
 
-                    this.last_confidence = this.confidence.maxPercent;
-                });
-            }
-        });
+                if (msg.msg_type === 'history' && msg.echo_req.ticks_history === this.symbol) {
+                    const digits = msg.history.prices.map((p: any) => parseInt(p.toString().slice(-1)));
+                    const lastPrice = msg.history.prices[msg.history.prices.length - 1];
+                    runInAction(() => {
+                        this.recent_digits = digits;
+                        this.current_price = lastPrice.toFixed(4);
+                    });
+                }
+            });
 
-        // Start real-time stream
-        api_base.api.send({
-            ticks: this.symbol,
-            subscribe: 1
-        });
+            // Start real-time stream
+            api_base.api.send({ ticks: this.symbol, subscribe: 1 });
 
-        // Initial historical data
-        api_base.api.send({
-            ticks_history: this.symbol,
-            count: 100,
-            end: 'latest',
-            style: 'ticks',
-        }).then((res: any) => {
-            if (res.history) {
-                const digits = res.history.prices.map((p: any) => parseInt(p.toString().slice(-1)));
-                const lastPrice = res.history.prices[res.history.prices.length - 1];
-                runInAction(() => {
-                    this.recent_digits = digits;
-                    this.current_price = lastPrice.toFixed(4);
-                });
-            }
+            // Initial historical data
+            api_base.api.send({
+                ticks_history: this.symbol,
+                count: 100,
+                end: 'latest',
+                style: 'ticks',
+            });
         });
     }
 
@@ -304,8 +311,8 @@ export default class OverUnderStore {
         const under = dist.slice(0, 5);
         const over = dist.slice(5, 10);
 
-        const highestUnder = [...under].sort((a, b) => b.count - a.count)[0];
-        const highestOver = [...over].sort((a, b) => b.count - a.count)[0];
+        const highestUnder = [...under].sort((a, b) => (b.count || 0) - (a.count || 0))[0] || { digit: 0, count: 0, percent: 0 };
+        const highestOver = [...over].sort((a, b) => (b.count || 0) - (a.count || 0))[0] || { digit: 9, count: 0, percent: 0 };
 
         return {
             highestUnder,
@@ -355,10 +362,12 @@ export default class OverUnderStore {
         this.phase = 1;
         this.phase2_ticks = 0;
         this.last_confidence = 0;
-        if (this.tick_subscription) {
-            this.tick_subscription.unsubscribe();
-            this.tick_subscription = null;
+
+        // Clear all tick subscriptions before switching
+        if (api_base.api) {
+            api_base.api.send({ forget_all: 'ticks' }).then(() => {
+                this.subscribeToTicks();
+            });
         }
-        this.subscribeToTicks();
     }
 }

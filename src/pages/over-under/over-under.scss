@@ -5,8 +5,9 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    background: #020617;
+    background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
     color: #f1f5f9;
+    min-height: 100vh;
     max-width: 1400px;
     margin: 0 auto;
     font-family: 'Inter', sans-serif;
@@ -173,3 +174,93 @@
         .meta-footer { display: flex; justify-content: center; gap: 2rem; font-size: 0.75rem; opacity: 0.4; font-weight: 800; }
     }
 }
+
+// --- Loading State ---
+.over-under-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+    color: #fff;
+    text-align: center;
+
+    .loading-hud {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .circle-outer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid rgba(72, 140, 251, 0.1);
+            border-top-color: #488cfb;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        .circle-inner {
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            border: 2px solid rgba(168, 85, 247, 0.1);
+            border-bottom-color: #a855f7;
+            border-radius: 50%;
+            animation: spin-reverse 1.5s linear infinite;
+        }
+
+        .icon-wrap {
+            z-index: 2;
+            color: #488cfb;
+            filter: drop-shadow(0 0 10px rgba(72, 140, 251, 0.5));
+            animation: pulse 2s ease-in-out infinite;
+        }
+    }
+
+    h3 {
+        font-size: 1.5rem;
+        font-weight: 900;
+        letter-spacing: 4px;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(90deg, #488cfb, #a855f7);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    p {
+        font-size: 0.9rem;
+        opacity: 0.5;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+
+    .force-refresh-btn {
+        margin-top: 2rem;
+        padding: 0.8rem 1.5rem;
+        background: rgba(72, 140, 251, 0.1);
+        border: 1px solid rgba(72, 140, 251, 0.3);
+        color: #488cfb;
+        border-radius: 8px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 10;
+
+        &:hover {
+            background: #488cfb;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(72, 140, 251, 0.4);
+        }
+    }
+}
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }

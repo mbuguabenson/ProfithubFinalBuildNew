@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { 
     Zap, 
@@ -55,6 +55,17 @@ const DigitDistributionCircle = ({ item, color, isActive, onClick }: { item: any
 
 const OverUnderTab = observer(() => {
     const { over_under } = useStore();
+    const [isStuck, setIsStuck] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (over_under.recent_digits.length < 5) {
+                setIsStuck(true);
+            }
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [over_under.recent_digits.length]);
+
     const { 
         recent_digits, 
         selected_digit,
@@ -90,6 +101,17 @@ const OverUnderTab = observer(() => {
                 </div>
                 <h3>CONSOLIDATING ANALYTICS</h3>
                 <p>Merging high-fidelity data streams...</p>
+                {isStuck && (
+                    <button 
+                        className='force-refresh-btn'
+                        onClick={() => {
+                            setIsStuck(false);
+                            over_under.setSymbol(over_under.symbol);
+                        }}
+                    >
+                        🔄 Refresh Connection
+                    </button>
+                )}
             </div>
         );
     }
@@ -168,14 +190,14 @@ const OverUnderTab = observer(() => {
                         <div className='split-row'>
                             {/* Under Section */}
                             <div className='split-col under'>
-                                <div className='percentage-val'>{analysis.underPercent.toFixed(1)}%</div>
+                                <div className='percentage-val'>{analysis?.underPercent?.toFixed(1) || '0.0'}%</div>
                                 <div className='label-row'>
                                     <span className='label'>Under (0-4)</span>
                                     <TrendingDown size={14} className='icon-slant' />
                                 </div>
-                                <div className='strongest'>Strongest Digit: {group_stats.highestUnder.digit}</div>
+                                <div className='strongest'>Strongest Digit: {group_stats?.highestUnder?.digit ?? 'N/A'}</div>
                                 <div className='progress-track'>
-                                    <div className='fill' style={{ width: `${analysis.underPercent}%` }} />
+                                    <div className='fill' style={{ width: `${analysis?.underPercent ?? 0}%` }} />
                                 </div>
                                 <div className='contracts-box'>
                                     <span className='title'>Predicted Under Contracts:</span>
@@ -189,14 +211,14 @@ const OverUnderTab = observer(() => {
 
                             {/* Over Section */}
                             <div className='split-col over'>
-                                <div className='percentage-val'>{analysis.overPercent.toFixed(1)}%</div>
+                                <div className='percentage-val'>{analysis?.overPercent?.toFixed(1) ?? '0.0'}%</div>
                                 <div className='label-row'>
                                     <span className='label'>Over (5-9)</span>
                                     <TrendingUp size={14} className='icon-slant' />
                                 </div>
-                                <div className='strongest'>Strongest Digit: {group_stats.highestOver.digit}</div>
+                                <div className='strongest'>Strongest Digit: {group_stats?.highestOver?.digit ?? 'N/A'}</div>
                                 <div className='progress-track'>
-                                    <div className='fill' style={{ width: `${analysis.overPercent}%` }} />
+                                    <div className='fill' style={{ width: `${analysis?.overPercent ?? 0}%` }} />
                                 </div>
                                 <div className='contracts-box'>
                                     <span className='title'>Predicted Over Contracts:</span>
@@ -250,24 +272,24 @@ const OverUnderTab = observer(() => {
                         <div className='power-metrics-grid'>
                             <div className='metric'>
                                 <span className='l'>Frequency</span>
-                                <span className='v'>{selected_digit_power.frequency.toFixed(1)}%</span>
+                                <span className='v'>{selected_digit_power?.frequency?.toFixed(1) || '0.0'}%</span>
                             </div>
                             <div className='metric'>
                                 <span className='l'>Momentum</span>
-                                <span className='v'>{selected_digit_power.momentum.toFixed(1)}%</span>
+                                <span className='v'>{selected_digit_power?.momentum?.toFixed(1) || '0.0'}%</span>
                             </div>
                         </div>
 
                         <div className='group-bars-mini-replica'>
                             <div className='bar over'>
-                                <div className='fill' style={{ width: `${selected_digit_analysis.overPercent}%` }} />
+                                <div className='fill' style={{ width: `${selected_digit_analysis?.overPercent || 0}%` }} />
                                 <span className='label'>Over ({selected_digit + 1}-9)</span>
-                                <span className='val'>{selected_digit_analysis.overPercent.toFixed(1)}%</span>
+                                <span className='val'>{selected_digit_analysis?.overPercent?.toFixed(1) || '0.0'}%</span>
                             </div>
                             <div className='bar under'>
-                                <div className='fill' style={{ width: `${selected_digit_analysis.underPercent}%` }} />
+                                <div className='fill' style={{ width: `${selected_digit_analysis?.underPercent || 0}%` }} />
                                 <span className='label'>Under (0-{selected_digit - 1 >= 0 ? selected_digit - 1 : 0})</span>
-                                <span className='val'>{selected_digit_analysis.underPercent.toFixed(1)}%</span>
+                                <span className='val'>{selected_digit_analysis?.underPercent?.toFixed(1) || '0.0'}%</span>
                             </div>
                         </div>
 
@@ -302,15 +324,15 @@ const OverUnderTab = observer(() => {
             <section className='metrics-grid-replica'>
                 <div className='metric-card purple'>
                     <span className='title'>Market Power</span>
-                    <span className='value'>{analysis.marketPower.toFixed(1)}%</span>
+                    <span className='value'>{analysis?.marketPower?.toFixed(1) || '0.0'}%</span>
                 </div>
                 <div className='metric-card orange'>
                     <span className='title'>Volatility</span>
-                    <span className='value'>{ (analysis.volatility * 10).toFixed(1) }%</span>
+                    <span className='value'>{ ((analysis?.volatility || 0) * 10).toFixed(1) }%</span>
                 </div>
                 <div className='metric-card blue'>
                     <span className='title'>Confirmed Ticks</span>
-                    <span className='value'>{confirmed_ticks}</span>
+                    <span className='value'>{confirmed_ticks || 0}</span>
                 </div>
             </section>
 

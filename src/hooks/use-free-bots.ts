@@ -4,10 +4,10 @@ import { useStore } from './useStore';
 
 export const useFreeBots = () => {
     const { load_modal, dashboard } = useStore();
-    const [selectedCategory, setSelectedCategory] = useState<string>('Automatic');
+    const [selectedCategory, setSelectedCategory] = useState<string>('Official');
     const [isLoading, setIsLoading] = useState(false);
 
-    const categories = ['Automatic', 'Hybrid'];
+    const categories = ['Official', 'Hybrid', 'Normal', 'Automatic'];
 
     const filteredBots = FREE_BOTS_DATA.filter(bot => bot.category === selectedCategory);
 

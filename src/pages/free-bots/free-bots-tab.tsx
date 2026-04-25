@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { observer } from 'mobx-react-lite';
 import TechBackground from '@/components/shared_ui/tech-background/tech-background';
 import { useFreeBots } from '@/hooks/use-free-bots';
@@ -27,7 +27,11 @@ const BotCard = ({ bot, onLoad }: { bot: any; onLoad: (bot: any) => void }) => {
         >
             <div className='card-glow' />
             <div className='bot-card__top'>
-                <div className='bot-card__icon'>{bot.category === 'Automatic' ? '🤖' : '⚡'}</div>
+                <div className='bot-card__icon'>
+                    {bot.category === 'Official' ? '🌟' : 
+                     bot.category === 'Hybrid' ? '⚡' : 
+                     bot.category === 'Normal' ? '📦' : '🤖'}
+                </div>
                 {bot.isPremium && <span className='bot-card__badge'>Premium</span>}
                 {bot.isNew && <span className='bot-card__badge bot-card__badge--new'>New</span>}
             </div>
@@ -48,7 +52,7 @@ const BotCard = ({ bot, onLoad }: { bot: any; onLoad: (bot: any) => void }) => {
 };
 
 const FreeBotsTab = observer(() => {
-    const { ui, dashboard } = useStore();
+    const { ui } = useStore();
     const { is_dark_mode_on } = ui;
     const { selectedCategory, setSelectedCategory, categories, filteredBots, loadBotToBuilder, isLoading } =
         useFreeBots();
@@ -57,16 +61,6 @@ const FreeBotsTab = observer(() => {
         <div className={`free-bots-engine ${is_dark_mode_on ? 'free-bots-engine--dark' : ''}`}>
             <TechBackground />
 
-            {/* Header */}
-            <div className='engine-header'>
-                <div className='engine-header__left'>
-                    <h2>📦 Nexus Strategy Hub</h2>
-                    <p>Premium XML Automated Strategies for DBot</p>
-                </div>
-                <div className='engine-header__right'>
-                    <div className='stats-badge'>Total Bots: {filteredBots.length}</div>
-                </div>
-            </div>
 
             <div className='tab-viewport'>
                 <div className='library-container'>
